@@ -1,0 +1,21 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "18.18.1",
+    "sdksVersions": {
+      "@microsoft/microsoft-graph-client": "3.0.2",
+      "@microsoft/teams-js": "2.12.0"
+    },
+    "version": "1.18.2",
+    "libraryName": "mystis",
+    "libraryId": "012725c2-f260-4b8b-bfe9-0ad852cb7693",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "Mystis",
+    "solutionShortDescription": "Mystis description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}
