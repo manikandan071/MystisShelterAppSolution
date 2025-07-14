@@ -19,6 +19,7 @@ import { IShelterBedAppProps } from "./components/IShelterBedAppProps";
 export interface IShelterBedAppWebPartProps {
   description: string;
 }
+require("../../../node_modules/primereact/resources/themes/bootstrap4-light-blue/theme.css");
 
 export default class ShelterBedAppWebPart extends BaseClientSideWebPart<IShelterBedAppWebPartProps> {
   // private _isDarkTheme: boolean = false;
