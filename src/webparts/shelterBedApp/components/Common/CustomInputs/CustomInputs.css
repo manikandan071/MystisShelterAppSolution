@@ -1,0 +1,57 @@
+.inputSectionWrapper{
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+/* Default border style */
+.p-dropdown, .inputBox .p-inputtext {
+    border: 1px solid #6f6a8a75 ;
+    box-shadow: none !important;
+    transition: border 0.2s ease;
+}
+
+/* On focus (user clicks the dropdown) */
+.p-dropdown.p-focus, .inputBox .p-inputtext:focus {
+    border: 1px solid #80bdff;
+    /* light blue */
+    box-shadow: 0 0 0 0.05rem rgba(0, 123, 255, 0.25);
+    /* subtle focus ring */ 
+}
+.right-redious-only{
+    border-radius: 0px 4px 4px 0px;
+}
+
+.error-input{
+    border: 1px solid #cf5555 !important;
+}
+
+/* icon input box */
+
+.p-icon-field .p-input-icon{
+    color: #b08a1d !important;
+}
+
+
+/* DropDown style */
+
+.p-dropdown-items{
+    padding: 0px;
+}
+
+/* 🔹 Selected item (always apply this style) */
+.p-dropdown-item[data-p-highlight="true"] {
+    background-color: #b08a1d !important;
+    color: white !important;
+}
+
+/* 🔹 Prevent hover from overriding selected item */
+.p-dropdown-item[data-p-highlight="true"]:hover {
+    background-color: #b08a1d !important;
+    color: white !important;
+}
+
+/* 🔸 Hover for non-selected items */
+.p-dropdown-item:not([data-p-highlight="true"]):hover {
+    background-color: #efe8d2 !important;
+    color: black !important; }

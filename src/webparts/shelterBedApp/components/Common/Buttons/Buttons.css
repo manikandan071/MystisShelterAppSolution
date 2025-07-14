@@ -1,0 +1,30 @@
+.defaultBtn{
+    padding: 5px 18px 7px 18px;
+    border-radius: 2px;
+    font-size: 14px !important;
+    font-weight: 600;
+}
+.defaultBtn:focus{
+    box-shadow: none;
+}
+.defaultBtn .p-button-icon{
+    font-size: 12px;
+}
+.primaryBtn{
+    background-color: #b08a1d;
+    border: 1px solid #b08a1d;
+    color: #fff;
+}
+.secondaryBtn{
+    background-color: #6f6a8a;
+    border: 1px solid #6f6a8a;
+}
+.submitBtn{
+    background-color: #593abb;
+    border: 1px solid #593abb;
+    color: #fff;
+}
+.cancelBtn{
+    background-color: #6f6a8a;
+    border: 1px solid #6f6a8a;
+}
