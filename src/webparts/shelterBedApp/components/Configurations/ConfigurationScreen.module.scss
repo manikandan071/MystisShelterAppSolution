@@ -1,0 +1,44 @@
+.container{
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: #f7f8fa;
+    font-family: Segoe UI, sans-serif;
+}
+.toggleBar {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    user-select: none;
+}
+.tabBtn{
+    background-color: transparent;
+    // color: #00000099;
+    color:#b08a1d;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 7px 28px;
+    border: none;
+    border: 1px solid #b08a1d;
+    cursor: pointer;
+}
+.activeTabBtn{
+    background-color: #b08a1d;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 7px 28px;
+    border: none;
+    border: 1px solid #b08a1d;
+    cursor: pointer;
+}
+.content{
+    flex: 1;
+    padding: 0px 20px;
+    border-radius: 18px;
+    // box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    // overflow: auto;
+    transition: box-shadow 0.3s;
+    min-height: 0;
+    display: flex;
+  }
