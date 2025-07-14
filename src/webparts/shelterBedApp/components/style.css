@@ -1,49 +1,238 @@
 #workbenchPageContent {
-    max-width: 100%;
-    margin: 0 auto;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .sp-appBar {
-    display: none !important;
+  display: none !important;
 }
 
 .content_3f3fd3c2,
 .CanvasZone {
-    padding: 0 !important;
-    max-width: 100% !important;
+  padding: 0 !important;
+  max-width: 100% !important;
 }
 
 .ControlZone {
-    padding: 0 !important;
-    margin: 0px !important;
-    max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0px !important;
+  max-width: 100% !important;
 }
 
-.CanvasZone>div {
-    /* max-width: 100% !important; */
-    padding: 0 !important;
+.CanvasZone > div {
+  /* max-width: 100% !important; */
+  padding: 0 !important;
 }
 
 .spAppAndPropertyPanelContainer {
-    padding-bottom: 10px !important;
+  padding-bottom: 10px !important;
 }
 
 #CommentsWrapper {
-    display: none !important;
+  display: none !important;
 }
 
 .commandBarWrapper {
-    display: none !important;
+  display: none !important;
 }
 
 #spSiteHeader {
-    display: none !important;
+  display: none !important;
 }
 
 .n_c_8474018e {
-    padding: 10px 20px 10px 10px !important;
+  padding: 10px 20px 10px 10px !important;
 }
 
 .spAppAndPropertyPanelContainer {
-    padding: 0px !important;
+  padding: 0px !important;
 }
+.p-button {
+  padding: 7px 12px !important;
+}
+.p-inputtext {
+  /* padding: 7px 12px; */
+  background-color: #ffffff80;
+  border-color: #b99223;
+  font-size: 0.8rem;
+  height: 32px;
+}
+
+.p-inputtext:enabled:focus,
+.p-dropdown:not(.p-disabled).p-focus,
+.p-calendar:not(.p-calendar-disabled).p-focus > .p-inputtext,
+.p-button:focus {
+  box-shadow: unset;
+  border-color: #b99223;
+}
+
+/* data table styles */
+table,
+th {
+  background-color: #f8f8f8 !important;
+  border-radius: 5px;
+}
+
+.viewForm table tr,
+th,
+td {
+  background-color: #ffffff30 !important;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  border-color: #fff !important;
+}
+
+.viewForm .p-datatable .p-datatable-thead > tr > th {
+  border-bottom: 1px solid #d2d2d2 !important;
+}
+
+thead tr {
+  border-radius: 8px;
+}
+
+table thead tr th:nth-child(1) {
+  border-top-left-radius: 6px;
+}
+
+table thead tr th:last-child {
+  border-top-right-radius: 6px;
+}
+
+.p-datatable td {
+  padding: 6px !important;
+}
+
+.p-datatable th {
+  padding: 10px !important;
+}
+
+.p-datepicker-calendar th,
+td {
+  padding: 8px;
+  font-size: 0.8rem;
+}
+
+table tbody tr:last-child td:nth-child(1) {
+  border-bottom-left-radius: 6px;
+}
+
+table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 6px;
+}
+
+.p-column-header-content {
+  color: #414141 !important;
+  font-size: 0.8rem;
+}
+
+.p-datatable-emptymessage td {
+  text-align: center !important;
+  font-size: 0.8rem;
+  color: rgb(11, 11, 11);
+}
+
+.p-datatable-emptymessage {
+  height: 60vh;
+}
+
+.dialogCloseIcon .p-dialog-header-icons,
+.approverConfigPopup .p-dialog-header-icons,
+.delPopup .p-dialog-header-icons,
+.workflowPopup .p-dialog-header-icons {
+  display: none;
+}
+.p-dropdown .p-inputtext,
+.p-calender .p-inputtext {
+  background-color: transparent;
+}
+
+.p-calendar {
+  border: 1px solid #b99223;
+  border-radius: 5px;
+  height: 32px;
+}
+
+.p-calendar .p-inputtext {
+  border: none;
+  height: 100%;
+}
+
+.p-datepicker-trigger {
+  background-color: transparent;
+  border-color: #b99223;
+  color: #b99223;
+  border: none;
+}
+
+.p-disabled {
+  color: #000 !important;
+  border: none !important;
+  padding: 0px !important;
+}
+.p-calendar-disabled {
+  color: #000 !important;
+  border: none !important;
+  padding: 0px !important;
+}
+
+.p-paginator-pages {
+  display: flex;
+  gap: 8px;
+}
+
+.p-paginator .p-highlight {
+  background-color: #b99223;
+  color: #fff !important;
+  border-radius: 30%;
+}
+.p-paginator-bottom button {
+  border: none !important;
+}
+
+/* toast styles */
+.p-toast-message {
+  border-radius: 4px;
+}
+
+.p-toast-message-content {
+  padding: 10px;
+  border-left: 5px solid;
+}
+
+.p-toast-message-content svg,
+.p-toast-icon-close svg {
+  height: 22px;
+  width: 22px;
+}
+
+.p-toast-message-text {
+  font-size: 0.9rem;
+}
+
+.p-toast-detail {
+  margin: 0;
+}
+
+/* del Popup */
+.delPopup .p-dialog-content {
+  padding-top: 3px;
+}
+.p-paginator .p-paginator-pages .p-paginator-page {
+  min-width: 32px !important;
+  height: 30px !important;
+}
+/* .p-datatable
+  .p-datatable-thead
+  > tr
+  > th:nth-child(6)
+  > .p-column-header-content {
+  justify-content: center;
+}
+.p-datatable
+  .p-datatable-thead
+  > tr
+  > th:nth-child(7)
+  > .p-column-header-content {
+  justify-content: center;
+} */
