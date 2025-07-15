@@ -13,6 +13,7 @@ import { sp } from "@pnp/sp/presets/all";
 import * as moment from "moment";
 import { IconField } from "primereact/iconfield";
 import { Dropdown } from "primereact/dropdown";
+
 interface Iuser {
   Id: number | null;
   Title: string;
@@ -28,6 +29,7 @@ interface IProps {
   allUser: Iuser[];
   CurrentUser: string;
   CurrentRole: string;
+  setconfigpage: any;
 }
 interface IData {
   id: number | null;
@@ -732,6 +734,20 @@ const Dashboard = (props: IProps): JSX.Element => {
                         gap: "5px",
                       }}
                     >
+                      <i
+                        className="pi pi-cog"
+                        title="Config"
+                        style={{
+                          color: "#0a194b",
+                          cursor: "pointer",
+                          fontSize: "20px",
+                          paddingRight: "10px",
+                        }}
+                        onClick={() => {
+                          props.setconfigpage(true);
+                          // <MainComponent />;
+                        }}
+                      />
                       <Dropdown
                         // value={dialog.data.shelter || ""}
                         // onChange={(e) => onChangeHandler("shelter", e.value)}
@@ -893,7 +909,7 @@ const Dashboard = (props: IProps): JSX.Element => {
             onHide={(): void => undefined}
             className="dialogCloseIcon"
           >
-            <div className={styles.modalBodyFlex}>
+            <div className={`${styles.modalBodyFlex}  dashboard-design`}>
               <div className={styles.fieldssm}>
                 <label>
                   Client Name {dialog.type === "view" ? "" : asterisk()}
@@ -909,6 +925,7 @@ const Dashboard = (props: IProps): JSX.Element => {
                   }
                 />
               </div>
+
               <div className={styles.fieldssm}>
                 <label>
                   Client Email {dialog.type === "view" ? "" : asterisk()}

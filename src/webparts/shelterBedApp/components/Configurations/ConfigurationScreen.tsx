@@ -8,13 +8,29 @@ import styles from "./ConfigurationScreen.module.scss";
 import ShelterConfig from "./ShelterConfig/ShelterConfig";
 import BedConfig from "./BedConfig/BedConfig";
 import "../../assets/css/DataTable.css";
+interface IProps {
+  setconfigpage: any;
+}
 
-const ConfigurationScreen: React.FC = () => {
+const ConfigurationScreen = (props: IProps) => {
   const [activeTab, setActiveTab] = React.useState<"bed" | "shelter">("bed");
 
   return (
     <div className={styles.container}>
       <div className={styles.toggleBar}>
+        <i
+          className="pi pi-arrow-left"
+          title="Config"
+          style={{
+            color: "#0a194b",
+            cursor: "pointer",
+            fontSize: "20px",
+            paddingRight: "20px",
+          }}
+          onClick={() => {
+            props.setconfigpage(false);
+          }}
+        />
         <button
           className={`${
             activeTab === "shelter" ? styles.activeTabBtn : styles.tabBtn
