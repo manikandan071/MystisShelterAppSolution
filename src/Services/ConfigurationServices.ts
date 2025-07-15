@@ -197,7 +197,6 @@ export const submitBedsDetails = async (
           Listname: SPLists.BedConfigList,
           RequestJSON: spPayload,
         });
-        console.log("res", res);
 
         tempArray.push({
           BedName: spPayload?.Title,
@@ -228,6 +227,7 @@ export const submitBedsDetails = async (
 export const updateBedsDetails = async (
   formDetails: any,
   deletedBedsList: any[],
+  setMasterState: any,
   setTempBedsList: any,
   setIsUpdateDetails: any,
   handleClosePopup: any,
@@ -330,6 +330,29 @@ export const updateBedsDetails = async (
 
       return updatedList.sort((a: any, b: any) => b.Id - a.Id);
     });
+    setMasterState((prev: any) => {
+      let updatedList = [...prev];
+
+      allResponses.forEach((response: any) => {
+        if (response?.type === "update") {
+          updatedList = updatedList.map((item: any) =>
+            item.Id === response.data.Id ? { ...item, ...response.data } : item
+          );
+        }
+
+        if (response?.type === "add") {
+          updatedList = [response.data, ...updatedList];
+        }
+
+        if (response?.type === "delete") {
+          updatedList = updatedList.filter(
+            (item: any) => item.Id !== response.id
+          );
+        }
+      });
+
+      return updatedList.sort((a: any, b: any) => b.Id - a.Id);
+    });
 
     handleClosePopup(index); // ✅ Close after all updates
     setIsUpdateDetails({ Id: null, Type: "", isLoading: false });
@@ -363,7 +386,8 @@ export const deleteBedDetails = async (
 
 export const submitSheltersDetails = async (
   formDetails: any,
-  setTempBedsList: any,
+  setMasterState: any,
+  setTempState: any,
   handleClosePopup: any,
   index: number
 ) => {
@@ -382,7 +406,6 @@ export const submitSheltersDetails = async (
           Listname: SPLists.ShelterConfigList,
           RequestJSON: spPayload,
         });
-        console.log("res", res);
 
         tempArray.push({
           Id: res?.data?.ID,
@@ -396,7 +419,10 @@ export const submitSheltersDetails = async (
     await Promise.all(bedInsertPromises);
 
     // ✅ Now update UI
-    setTempBedsList((prev: any) =>
+    setMasterState((prev: any) =>
+      [...tempArray, ...prev].sort((a, b) => b.Id - a.Id)
+    );
+    setTempState((prev: any) =>
       [...tempArray, ...prev].sort((a, b) => b.Id - a.Id)
     );
     handleClosePopup(index); // ✅ now runs AFTER SharePoint updates
@@ -404,9 +430,10 @@ export const submitSheltersDetails = async (
     console.error("Error:", err);
   }
 };
-export const updateShelterssDetails = async (
+export const updateSheltersDetails = async (
   formDetails: any,
   deletedBedsList: any[],
+  setMasterState: any,
   setSheltersList: any,
   setIsUpdateDetails: any,
   handleClosePopup: any,
@@ -478,6 +505,29 @@ export const updateShelterssDetails = async (
 
     // ✅ Prepare new temp list
     setSheltersList((prev: any) => {
+      let updatedList = [...prev];
+
+      allResponses.forEach((response: any) => {
+        if (response?.type === "update") {
+          updatedList = updatedList.map((item: any) =>
+            item.Id === response.data.Id ? { ...item, ...response.data } : item
+          );
+        }
+
+        if (response?.type === "add") {
+          updatedList = [response.data, ...updatedList];
+        }
+
+        if (response?.type === "delete") {
+          updatedList = updatedList.filter(
+            (item: any) => item.Id !== response.id
+          );
+        }
+      });
+
+      return updatedList.sort((a: any, b: any) => b.Id - a.Id);
+    });
+    setMasterState((prev: any) => {
       let updatedList = [...prev];
 
       allResponses.forEach((response: any) => {

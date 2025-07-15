@@ -25,7 +25,7 @@ import MainComponent from "./MainComponent";
 // }
 
 const ShelterBedApp: any = ({ context }: any) => {
-  return <MainComponent context={context} />;
+  return <MainComponent />;
 };
 
 export default ShelterBedApp;

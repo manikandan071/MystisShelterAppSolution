@@ -13,6 +13,7 @@ interface dropDownProps {
   value: string;
   onChange: any;
   disabled?: boolean;
+  readOnly?: boolean;
   isValid?: boolean;
   sectionType: any;
   placeholder: string;
@@ -25,6 +26,7 @@ const CustomInputBox: React.FC<dropDownProps> = ({
   value,
   onChange,
   disabled = false,
+  readOnly = false,
   sectionType,
   labelText,
   placeholder,
@@ -34,7 +36,6 @@ const CustomInputBox: React.FC<dropDownProps> = ({
   onFoucs = false,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  console.log("isValid", isValid);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,6 +69,7 @@ const CustomInputBox: React.FC<dropDownProps> = ({
         className={`w-full md:w-14rem one ${customClassName} ${
           !isValid ? "error-input" : ""
         }`}
+        readOnly={readOnly}
       />
     </div>
   );

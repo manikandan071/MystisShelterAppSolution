@@ -30,8 +30,6 @@ const CustomDropDown: React.FC<dropDownProps> = ({
   ismandatory = false,
 }) => {
   useEffect(() => {
-    console.log("value", value);
-
     // Wait a tick to ensure dropdown is rendered
     const timeout = setTimeout(() => {
       const focusedDropdown = document.querySelector(".p-dropdown.p-focus");

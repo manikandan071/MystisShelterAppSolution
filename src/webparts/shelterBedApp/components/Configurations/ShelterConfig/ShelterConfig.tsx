@@ -15,13 +15,14 @@ import {
   deleteShelterDetails,
   fetchShelterDetailsMaster,
   submitSheltersDetails,
-  updateShelterssDetails,
+  updateSheltersDetails,
 } from "../../../../../Services/ConfigurationServices";
 import { GenerateCustomId, OnTextRender } from "../../../../../Utils/dataTable";
 import { togglePopupVisibility } from "../../../../../Utils/togglePopup";
 import Popup from "../../Common/Popup/Popup";
 import CustomInputBox from "../../Common/CustomInputs/CustomInputBox";
 import {
+  getFirstInvalidErrorMsg,
   onChangeFunction,
   rowOnChangeFunction,
 } from "../../../../../Utils/onChange";
@@ -69,7 +70,7 @@ const ShelterConfig: React.FC = () => {
   const [isLoader, setIsLoader] = useState<boolean>(true);
   const [isUpdateDetails, setIsUpdateDetails] = useState<any>({
     Id: null,
-    Type: "New",
+    Type: "new",
     isLoading: false,
   });
   const [rowIndex, setRowIndex] = useState<number | null>(null);
@@ -99,7 +100,6 @@ const ShelterConfig: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<any>({
     SearchValue: "",
   });
-  console.log("deletedBedsList", deletedBedsList);
 
   const onChange = (value: any, isBreakeCondition?: boolean) => {
     onChangeFunction("Beds", value, setFormDetails);
@@ -126,12 +126,11 @@ const ShelterConfig: React.FC = () => {
         isMandatory: false,
       },
     };
-    setNewSheltersList((prevRows) => [...prevRows, newRow]);
-    onChange?.([...newSheltersList, newRow], false);
+    setNewSheltersList((prevRows) => [newRow, ...prevRows]);
+    onChange?.([newRow, ...newSheltersList], false);
   };
 
   const removeRow = (shelterId: number, indexToRemove: number) => {
-    debugger;
     const updatedList = newSheltersList.filter((_, index) => {
       if (_?.ShelterName?.Id === shelterId) {
         setDeletedBedsList((prev: any) => {
@@ -142,6 +141,21 @@ const ShelterConfig: React.FC = () => {
     });
     setNewSheltersList(updatedList);
     onChange?.(updatedList, false);
+  };
+
+  const hasDuplicateShelterName = (
+    data: any[],
+    shelterId: number,
+    shelterNameToCheck: string
+  ): boolean => {
+    const filtered = data.filter((item) => item.Id !== shelterId);
+
+    const duplicate = filtered.find(
+      (item) =>
+        item.ShelterName.toLowerCase() === shelterNameToCheck.toLowerCase()
+    );
+
+    return !!duplicate;
   };
 
   const popupInputs: any[] = [
@@ -173,6 +187,7 @@ const ShelterConfig: React.FC = () => {
               icon="pi pi-plus"
               onClick={addNewRow}
               text="Shelter"
+              disabled={getFirstInvalidErrorMsg(newSheltersList) ? true : false}
             />
           </div>
           <div
@@ -193,13 +208,13 @@ const ShelterConfig: React.FC = () => {
           <div
             style={{
               minHeight: "50px",
-              maxHeight: "211px",
+              maxHeight: "282px",
               overflow: "auto",
               width: "100%",
               display: "flex",
               flexWrap: "wrap",
               gap: "10px",
-              padding: "0px 0px 10px 0px",
+              padding: "0px 10px 10px 10px",
             }}
           >
             {formDetails?.Beds?.value?.map((shelter: any, index: number) => {
@@ -224,22 +239,53 @@ const ShelterConfig: React.FC = () => {
                       //   onChangeFunction("BedName", value, setFormDetails);
                       // }}
                       onChange={(value: any) => {
-                        rowOnChangeFunction(
-                          "ShelterName",
-                          value,
-                          setNewSheltersList,
-                          index,
-                          onChange
+                        const isDuplicate = hasDuplicateShelterName(
+                          masterSheltersList,
+                          shelter?.ShelterName?.Id,
+                          value
                         );
+                        if (isDuplicate) {
+                          setNewSheltersList((prevState: any) => {
+                            const updatedState = [...prevState];
+                            updatedState[index] = {
+                              ...updatedState[index],
+                              ["ShelterName"]: {
+                                ...updatedState[index]["ShelterName"],
+                                value,
+                                isValid: !isDuplicate,
+                                errorMessage: isDuplicate
+                                  ? `Shelter ${value} already exists.`
+                                  : "",
+                              },
+                            };
+
+                            if (onChange) {
+                              onChange(updatedState, false);
+                            }
+                            return updatedState;
+                          });
+                        } else {
+                          rowOnChangeFunction(
+                            "ShelterName",
+                            value,
+                            setNewSheltersList,
+                            index,
+                            onChange,
+                            true
+                          );
+                        }
                       }}
                       sectionType="one-89"
                       inputType="text"
                       customClassName="right-redious-only"
                       isValid={shelter?.ShelterName?.isValid}
+                      // onFoucs={
+                      //   formDetails?.Beds?.value?.length === index + 1
+                      //     ? true
+                      //     : false
+                      // }
                       onFoucs={
-                        formDetails?.Beds?.value?.length === index + 1
-                          ? true
-                          : false
+                        shelter?.ShelterName?.value === "" ? true : false
                       }
                     />
                   </div>
@@ -306,19 +352,25 @@ const ShelterConfig: React.FC = () => {
 
   const handleSubmitFuction = async (): Promise<void> => {
     const isFormValid = validateForm(formDetails, setFormDetails);
-    debugger;
     if (isFormValid && isUpdateDetails?.Type === "update") {
       // setPopupResponseFun(setPopupResponse, 0, true, "", "");
-      updateShelterssDetails(
+      updateSheltersDetails(
         formDetails,
         deletedBedsList,
+        setMasterSheltersList,
         setSheltersList,
         setIsUpdateDetails,
         handleClosePopup,
         0
       );
     } else if (isFormValid) {
-      submitSheltersDetails(formDetails, setSheltersList, handleClosePopup, 0);
+      submitSheltersDetails(
+        formDetails,
+        setMasterSheltersList,
+        setSheltersList,
+        handleClosePopup,
+        0
+      );
     }
   };
 
@@ -345,15 +397,15 @@ const ShelterConfig: React.FC = () => {
             },
           ]);
           setFormDetails(deepClone(cloneFormDetails));
+          setIsUpdateDetails({ Id: null, Type: "new", isLoading: false });
         },
       },
       {
         text: "Submit",
         btnType: "primaryBtn",
-        disabled: false,
+        disabled: getFirstInvalidErrorMsg(newSheltersList) ? true : false,
         onClick: () => {
           handleSubmitFuction();
-          console.log("submitted");
         },
       },
     ],
@@ -376,7 +428,6 @@ const ShelterConfig: React.FC = () => {
         btnType: "primaryBtn",
         disabled: false,
         onClick: () => {
-          console.log("deleteBedId", isUpdateDetails);
           if (isUpdateDetails?.Type === "delete") {
             deleteShelterDetails(
               isUpdateDetails?.Id,
@@ -391,7 +442,8 @@ const ShelterConfig: React.FC = () => {
   ];
 
   const openAddFormPopup = () => {
-    console.log("clicked");
+    setIsUpdateDetails({ Id: null, Type: "new", isLoading: false });
+    setFormDetails(deepClone(cloneFormDetails));
     togglePopupVisibility(setPopupController, 0, "open", `Add Shelters`);
   };
 
@@ -438,9 +490,10 @@ const ShelterConfig: React.FC = () => {
 
       setNewSheltersList(matchedBeds);
       togglePopupVisibility(setPopupController, 0, "open", "Update Shelter");
-    } else {
-      handleClosePopup(0);
     }
+    // else {
+    //   handleClosePopup(0);
+    // }
   }, [isUpdateDetails?.Id, isUpdateDetails?.Type, sheltersList]);
 
   const actionBoadyTemplate = (rowData: any) => {
@@ -500,9 +553,13 @@ const ShelterConfig: React.FC = () => {
   };
 
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", padding: "15px" }}>
       <div className={styles.dashboardHeader}>
-        <span className={styles.title}>Shelter Details</span>
+        {/* <span className={styles.title}>Shelter Details</span> */}
+        <div className={styles.heading}>
+          Shelter Details
+          <hr style={{ borderColor: "#b99223" }}></hr>
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <CustomSearchInput
             value={searchQuery?.SearchValue}
@@ -528,7 +585,7 @@ const ShelterConfig: React.FC = () => {
           scrollHeight="60vh"
           style={{ minWidth: "100%" }}
           key={0}
-          paginator
+          paginator={sheltersList?.length > 0}
           rows={10}
           paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
           currentPageReportTemplate={`Showing {first} to {last} of {totalRecords} ${
@@ -609,6 +666,7 @@ const ShelterConfig: React.FC = () => {
           confirmationTitle={
             popupData.popupType !== "custom" ? popupData.popupTitle : ""
           }
+          errorMessage={getFirstInvalidErrorMsg(newSheltersList)}
         />
       ))}
     </div>
