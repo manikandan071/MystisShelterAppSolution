@@ -91,3 +91,10 @@
     padding: 0px 2px !important;
     background-color: #d74c14;
 }
+.align-end {
+    align-items: end !important;
+}
+
+.space-between{
+    justify-content: space-between !important;
+}

@@ -14,7 +14,7 @@ import {
   fetchBedDetails,
   fetchBedLogDetails,
   fetchShelterDetails,
-  submitBedsDetails,
+  // submitBedsDetails,
   updateBedsDetails,
 } from "../../../../../Services/ConfigurationServices";
 import CustomButton from "../../Common/Buttons/Buttons";
@@ -25,6 +25,7 @@ import CustomDropDown from "../../Common/CustomInputs/CustomDropDown";
 import CustomInputBox from "../../Common/CustomInputs/CustomInputBox";
 import { deepClone } from "../../../../../Utils/deepClone";
 import {
+  getFirstInvalidErrorMsg,
   onChangeFunction,
   rowOnChangeFunction,
 } from "../../../../../Utils/onChange";
@@ -103,6 +104,7 @@ const BedConfig: React.FC = () => {
   const [popupController, setPopupController] = useState(
     initialPopupController
   );
+
   const [formDetails, setFormDetails] = useState(deepClone(cloneFormDetails));
   const [newBedsList, setNewBedsList] = useState<any[]>([
     {
@@ -119,16 +121,14 @@ const BedConfig: React.FC = () => {
     },
   ]);
   const [deletedBedsList, setDeletedBedsList] = useState<any[]>([]);
-  console.log("deletedBedsList", deletedBedsList);
 
   // const [popupResponse, setPopupResponse] = useState(initialPopupResponse);
   const [rowIndex, setRowIndex] = useState<number | null>(null);
   const [isUpdateDetails, setIsUpdateDetails] = useState<any>({
     Id: null,
-    Type: "New",
+    Type: "new",
     isLoading: false,
   });
-  console.log("isUpdateDetails", isUpdateDetails);
 
   const [bedLogsList, setBedLogsList] = useState<bedLogsProps[]>([]);
   const [masterBedslist, setMasterBedslist] = useState<bedProps[]>([]);
@@ -138,12 +138,6 @@ const BedConfig: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<any>({
     SearchValue: "",
   });
-  console.log("isLoader", isLoader);
-  console.log("formDetails", formDetails);
-  console.log("tempBedslist", tempBedslist);
-  console.log("sheltersList", sheltersList);
-  console.log("newBedsList", newBedsList);
-  console.log("bedLogsList", bedLogsList);
 
   const onChange = (value: any, isBreakeCondition?: boolean) => {
     onChangeFunction("Beds", value, setFormDetails);
@@ -166,14 +160,13 @@ const BedConfig: React.FC = () => {
         isMandatory: false,
       },
     };
-    setNewBedsList((prevRows) => [...prevRows, newRow]);
-    onChange?.([...newBedsList, newRow], false);
+    setNewBedsList((prevRows) => [newRow, ...prevRows]);
+    onChange?.([newRow, ...newBedsList], false);
   };
 
   const removeRow = (bedId: number, indexToRemove: number) => {
-    debugger;
     const updatedList = newBedsList.filter((_, index) => {
-      if (_?.BedName?.Id === bedId) {
+      if (_?.BedName?.Id === bedId && bedId) {
         setDeletedBedsList((prev: any) => {
           return [...prev, bedId];
         });
@@ -186,31 +179,107 @@ const BedConfig: React.FC = () => {
 
   const handleSubmitFuction = async (): Promise<void> => {
     const isFormValid = validateForm(formDetails, setFormDetails);
-    debugger;
     if (isFormValid && isUpdateDetails?.Type === "update") {
       // setPopupResponseFun(setPopupResponse, 0, true, "", "");
       updateBedsDetails(
         formDetails,
         deletedBedsList,
+        setMasterBedslist,
         setTempBedsList,
         setIsUpdateDetails,
         handleClosePopup,
         0
       );
     } else if (isFormValid) {
-      submitBedsDetails(formDetails, setTempBedsList, handleClosePopup, 0);
+      // submitBedsDetails(formDetails, setTempBedsList, handleClosePopup, 0);
+      updateBedsDetails(
+        formDetails,
+        deletedBedsList,
+        setMasterBedslist,
+        setTempBedsList,
+        setIsUpdateDetails,
+        handleClosePopup,
+        0
+      );
     }
+  };
+
+  const hasDuplicateBedNameInShelter = (
+    data: any[],
+    bedId: number,
+    shelterId: number,
+    shelterName: string,
+    bedNameToCheck: string
+  ): boolean => {
+    const filtered = data.filter(
+      (item) =>
+        item.ShelterId === shelterId &&
+        item.ShelterName.toLowerCase() === shelterName.toLowerCase() &&
+        item.Id !== bedId
+    );
+
+    const duplicate = filtered.find(
+      (item) => item.BedName.toLowerCase() === bedNameToCheck.toLowerCase()
+    );
+
+    return !!duplicate;
   };
 
   const popupInputs: any[] = [
     [
       <div key={1} style={{ width: "100%" }}>
-        <div className="section-wrapper padding-buttom-10 ">
+        <div className="section-wrapper padding-buttom-10 align-end space-between">
           <CustomDropDown
             options={sheltersList}
             disabled={false}
             onClick={(value: any) => {
               onChangeFunction("ShelterName", value, setFormDetails);
+              const matchedBeds = tempBedslist
+                ?.filter((bed: any) => bed?.ShelterId === value?.Id)
+                ?.map((bed: any) => ({
+                  BedName: {
+                    value: bed?.BedName || "",
+                    isValid: true,
+                    isMandatory: true,
+                    Id: bed?.Id,
+                  },
+                  BedDescription: {
+                    value: bed?.Description !== "-" ? bed?.Description : "",
+                    isValid: true,
+                    isMandatory: false,
+                  },
+                }));
+
+              const initialBed = [
+                {
+                  BedName: {
+                    value: "",
+                    isValid: true,
+                    isMandatory: true,
+                  },
+                  BedDescription: {
+                    value: "",
+                    isValid: true,
+                    isMandatory: false,
+                  },
+                },
+              ];
+
+              setFormDetails({
+                Beds: {
+                  value: matchedBeds?.length > 0 ? matchedBeds : initialBed,
+                  isValid: true,
+                  isMandatory: true,
+                },
+                ShelterName: {
+                  value: value,
+                  isValid: true,
+                  isMandatory: true,
+                },
+              });
+              setNewBedsList(
+                matchedBeds?.length > 0 ? matchedBeds : initialBed
+              );
             }}
             value={formDetails?.ShelterName?.value}
             sectionType="three"
@@ -218,6 +287,15 @@ const BedConfig: React.FC = () => {
             isValid={formDetails?.ShelterName?.isValid}
             ismandatory={true}
           />
+          {isUpdateDetails?.Type === "new" && (
+            <CustomButton
+              btnType="primaryBtn"
+              icon="pi pi-plus"
+              onClick={addNewRow}
+              text="Bed"
+              disabled={getFirstInvalidErrorMsg(newBedsList) ? true : false}
+            />
+          )}
         </div>
         {/* <label
           style={{
@@ -233,7 +311,7 @@ const BedConfig: React.FC = () => {
         {/* <fieldset className="custom-fieldset"> */}
         {/* <legend className="custom-legend">Beds</legend> */}
         <div>
-          <div
+          {/* <div
             style={{
               display: "flex",
               justifyContent: "end",
@@ -246,7 +324,7 @@ const BedConfig: React.FC = () => {
               onClick={addNewRow}
               text="Bed"
             />
-          </div>
+          </div> */}
           <div
             style={{
               display: "flex",
@@ -255,6 +333,7 @@ const BedConfig: React.FC = () => {
               margin: "10px 0px",
               fontSize: "13px",
               fontWeight: "600",
+              padding: "0px 10px",
             }}
           >
             <label style={{ width: "40%" }}>
@@ -265,13 +344,13 @@ const BedConfig: React.FC = () => {
           <div
             style={{
               minHeight: "50px",
-              maxHeight: "211px",
+              maxHeight: "282px",
               overflow: "auto",
               width: "100%",
               display: "flex",
               flexWrap: "wrap",
               gap: "10px",
-              padding: "0px 0px 10px 0px",
+              padding: "0px 10px 10px 10px",
             }}
           >
             {formDetails?.Beds?.value?.map((beds: any, index: number) => {
@@ -296,23 +375,66 @@ const BedConfig: React.FC = () => {
                       //   onChangeFunction("BedName", value, setFormDetails);
                       // }}
                       onChange={(value: any) => {
-                        rowOnChangeFunction(
-                          "BedName",
-                          value,
-                          setNewBedsList,
-                          index,
-                          onChange
-                        );
+                        if (isUpdateDetails?.Type === "update") {
+                          const isDuplicate = hasDuplicateBedNameInShelter(
+                            masterBedslist,
+                            isUpdateDetails?.Id,
+                            isUpdateDetails?.ShelterId,
+                            isUpdateDetails?.ShelterName,
+                            value
+                          );
+                          if (isDuplicate) {
+                            setNewBedsList((prevState: any) => {
+                              const updatedState = [...prevState];
+                              updatedState[0] = {
+                                ...updatedState[0],
+                                ["BedName"]: {
+                                  ...updatedState[0]["BedName"],
+                                  value,
+                                  isValid: !isDuplicate,
+                                  errorMessage: isDuplicate
+                                    ? `Bed ${value} already exists in ${isUpdateDetails?.ShelterName}`
+                                    : "",
+                                },
+                              };
+
+                              if (onChange) {
+                                onChange(updatedState, false);
+                              }
+                              return updatedState;
+                            });
+                          } else {
+                            rowOnChangeFunction(
+                              "BedName",
+                              value,
+                              setNewBedsList,
+                              index,
+                              onChange,
+                              true
+                            );
+                          }
+                        } else {
+                          rowOnChangeFunction(
+                            "BedName",
+                            value,
+                            setNewBedsList,
+                            index,
+                            onChange,
+                            true
+                          );
+                        }
                       }}
                       sectionType="one-89"
                       inputType="text"
                       customClassName="right-redious-only"
                       isValid={beds?.BedName?.isValid}
-                      onFoucs={
-                        formDetails?.Beds?.value?.length === index + 1
-                          ? true
-                          : false
-                      }
+                      // onFoucs={
+                      //   formDetails?.Beds?.value?.length === index + 1
+                      //     ? true
+                      //     : false
+                      // }
+                      onFoucs={beds?.BedName?.value === "" ? true : false}
+                      readOnly={!formDetails?.ShelterName?.value}
                     />
                   </div>
                   <CustomTextArea
@@ -335,6 +457,7 @@ const BedConfig: React.FC = () => {
                     inputType="text"
                     customClassName=""
                     isValid={beds?.BedDescription?.isValid}
+                    readOnly={!formDetails?.ShelterName?.value}
                   />
                   <div style={{ alignSelf: "center" }}>
                     {newBedsList.length > 1 && (
@@ -378,7 +501,7 @@ const BedConfig: React.FC = () => {
           value={bedLogsList}
           scrollable
           scrollHeight="60vh"
-          style={{ minWidth: "100%", minHeight: "30V", maxHeight: "65vh" }}
+          style={{ minWidth: "100%", minHeight: "30Vh", maxHeight: "65vh" }}
           key={0}
           paginator={bedLogsList?.length > 0}
           rows={10}
@@ -486,15 +609,20 @@ const BedConfig: React.FC = () => {
             },
           ]);
           setFormDetails(deepClone(cloneFormDetails));
+          setIsUpdateDetails({
+            Id: null,
+            Type: "new",
+            isLoading: false,
+          });
+          setDeletedBedsList([]);
         },
       },
       {
         text: "Submit",
         btnType: "primaryBtn",
-        disabled: false,
+        disabled: getFirstInvalidErrorMsg(newBedsList) ? true : false,
         onClick: () => {
           handleSubmitFuction();
-          console.log("submitted");
         },
       },
     ],
@@ -517,7 +645,6 @@ const BedConfig: React.FC = () => {
         btnType: "primaryBtn",
         disabled: false,
         onClick: () => {
-          console.log("deleteBedId", isUpdateDetails);
           if (isUpdateDetails?.Type === "delete") {
             deleteBedDetails(
               isUpdateDetails?.Id,
@@ -547,7 +674,7 @@ const BedConfig: React.FC = () => {
   ];
 
   const openAddFormPopup = () => {
-    console.log("clicked");
+    setIsUpdateDetails({ Id: null, Type: "new", isLoading: false });
     setFormDetails(deepClone(cloneFormDetails));
     togglePopupVisibility(setPopupController, 0, "open", `Add Beds`);
   };
@@ -577,7 +704,7 @@ const BedConfig: React.FC = () => {
       const shelterName = matchedShelter?.name || isUpdateDetails?.ShelterName;
 
       const matchedBeds = tempBedslist
-        ?.filter((bed: any) => bed?.ShelterId === shelterId)
+        ?.filter((bed: any) => bed?.Id === isUpdateDetails?.Id)
         ?.map((bed: any) => ({
           BedName: {
             value: bed?.BedName || "",
@@ -609,10 +736,11 @@ const BedConfig: React.FC = () => {
       });
 
       setNewBedsList(matchedBeds);
-      togglePopupVisibility(setPopupController, 0, "open", "Update Beds");
-    } else {
-      handleClosePopup(0);
+      togglePopupVisibility(setPopupController, 0, "open", "Update Bed");
     }
+    // else {
+    //   handleClosePopup(0);
+    // }
   }, [isUpdateDetails?.Id, isUpdateDetails?.Type, tempBedslist, sheltersList]);
 
   // const filterShelterBeds = (ShelterId: number, shelterName: string) => {
@@ -633,7 +761,6 @@ const BedConfig: React.FC = () => {
   //         },
   //       };
   //     });
-  //   console.log("tempFilteredData", tempFilteredData);
   //   setFormDetails((prev: any) => {
   //     return {
   //       ...prev,
@@ -862,6 +989,7 @@ const BedConfig: React.FC = () => {
           confirmationTitle={
             popupData.popupType !== "custom" ? popupData.popupTitle : ""
           }
+          errorMessage={getFirstInvalidErrorMsg(newBedsList)}
         />
       ))}
     </div>

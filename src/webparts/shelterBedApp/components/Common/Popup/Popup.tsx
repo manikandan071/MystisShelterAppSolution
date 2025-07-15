@@ -25,6 +25,7 @@ interface Props {
   confirmationTitle?: string;
   isLoading?: boolean;
   popupHeight?: boolean;
+  errorMessage?: any;
 }
 
 interface PopupActionBtn {
@@ -53,6 +54,7 @@ const Popup = ({
   confirmationTitle,
   isLoading,
   popupHeight,
+  errorMessage,
   ...btnRest
 }: Props): JSX.Element => {
   const [label, setLabel] = useState("3s");
@@ -82,6 +84,9 @@ const Popup = ({
           : styles.popupFooter
       }
     >
+      <span style={{ fontSize: "13px", fontWeight: "600", color: "red" }}>
+        {errorMessage}
+      </span>
       {popupActions?.map((btn, id) => (
         <CustomButton
           key={id}

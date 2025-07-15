@@ -14,6 +14,7 @@ interface dropDownProps {
   value: string;
   onChange: any;
   disabled?: boolean;
+  readOnly?: boolean;
   isValid?: boolean;
   sectionType: any;
   placeholder: string;
@@ -25,6 +26,7 @@ const CustomTextArea: React.FC<dropDownProps> = ({
   value,
   onChange,
   disabled = false,
+  readOnly = false,
   sectionType,
   labelText,
   placeholder,
@@ -32,12 +34,8 @@ const CustomTextArea: React.FC<dropDownProps> = ({
   customClassName,
   isValid,
 }) => {
-  console.log("isValid", isValid);
-
   const handleChange = useCallback(
     (value: string) => {
-      console.log(value);
-
       const newValue =
         inputType === "number"
           ? parseFloat(value)
@@ -64,6 +62,7 @@ const CustomTextArea: React.FC<dropDownProps> = ({
           !isValid ? "error-input" : ""
         }`}
         placeholder={placeholder}
+        readOnly={readOnly}
       />
     </div>
   );

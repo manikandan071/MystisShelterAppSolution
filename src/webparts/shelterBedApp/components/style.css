@@ -55,7 +55,7 @@
   background-color: #ffffff80;
   border-color: #b99223;
   font-size: 0.8rem;
-  height: 32px;
+  /* height: 32px; */
 }
 
 .p-inputtext:enabled:focus,
@@ -165,11 +165,11 @@ table tbody tr:last-child td:last-child {
   border: none;
 }
 
-.p-disabled {
+/* .p-disabled {
   color: #000 !important;
   border: none !important;
   padding: 0px !important;
-}
+} */
 .p-calendar-disabled {
   color: #000 !important;
   border: none !important;
