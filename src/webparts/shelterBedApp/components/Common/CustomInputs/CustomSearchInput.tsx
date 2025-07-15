@@ -23,7 +23,7 @@ const CustomSearchInput: React.FC<dropDownProps> = ({
   value,
   onChange,
   placeholder,
-  width = "300px",
+  width = "204.87px",
   disabled = false,
   customClassName,
 }) => {
@@ -54,8 +54,12 @@ const CustomSearchInput: React.FC<dropDownProps> = ({
         />
         <InputText
           style={{
-            padding: "7px 7px 7px 45px",
-            fontSize: "13px",
+            padding: "0.5rem 0.75rem",
+            fontSize: "0.8rem",
+            height: "32px",
+            borderRadius: "4px",
+            paddingLeft: "2.5rem",
+            borderColor: "#b99223",
             width: `${width}`,
           }}
           value={value}

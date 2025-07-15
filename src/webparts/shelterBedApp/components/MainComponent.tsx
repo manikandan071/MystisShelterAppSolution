@@ -5,6 +5,7 @@ import "primereact/resources/themes/bootstrap4-light-blue/theme.css";
 import { Toast } from "primereact/toast";
 import { useState, useRef, useEffect } from "react";
 import { sp } from "@pnp/sp/presets/all";
+import ConfigurationScreen from "./Configurations/ConfigurationScreen";
 
 interface Iuser {
   Id: number | null;
@@ -18,6 +19,7 @@ const MainComponent: any = (props: any) => {
   const [users, setUsers] = useState<Iuser[]>([]);
   const toast: any = useRef(null);
   const CurrentUser = props?.context?._pageContext?._user?.email;
+  const [configpage, setconfigpage] = useState<boolean>(false);
 
   // err function
   const errFunction = (err: string, funcName: string): void => {
@@ -36,6 +38,7 @@ const MainComponent: any = (props: any) => {
       .then(async (items) => {
         setCurrentRole(items[0].Role);
         setLoader(false);
+        setconfigpage(false);
       })
       .catch((err) => {
         console.error("Error get all userconfig:", err);
@@ -75,18 +78,21 @@ const MainComponent: any = (props: any) => {
   useEffect(() => {
     getUser(); // Call the async function inside useEffect
   }, []);
-  return (
-    !loader && (
-      <div>
-        <Dashboard
-          toastFunc={toastFunc}
-          allUser={users}
-          CurrentUser={CurrentUser}
-          CurrentRole={CurrentRole}
-        />
-        <Toast ref={toast} />
-      </div>
-    )
+  return !loader && !configpage ? (
+    <div>
+      <Dashboard
+        toastFunc={toastFunc}
+        allUser={users}
+        CurrentUser={CurrentUser}
+        CurrentRole={CurrentRole}
+        setconfigpage={setconfigpage}
+      />
+      <Toast ref={toast} />
+    </div>
+  ) : (
+    <div>
+      <ConfigurationScreen setconfigpage={setconfigpage} />
+    </div> // or null, or a loading spinner
   );
 };
 

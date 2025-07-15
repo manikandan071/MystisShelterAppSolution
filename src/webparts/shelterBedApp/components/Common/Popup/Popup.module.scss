@@ -22,17 +22,16 @@
 .AlertPopupHeader,
 .popupHeaderWithoutCloseIcon {
   width: 100%;
-  padding: 28px 36px;
-  padding-bottom: 25px;
+  // padding: 28px 36px;
+  // padding-bottom: 25px;
   // font-family: "interSemiBold", sans-serif;
   // font-size: 20px;
-  .header{
-    font-size: 23px;
-    font-weight: 600;
+  .header {
     color: #1e2023;
-    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 1.25rem;
   }
-  span{
+  span {
     display: inline-flex;
     align-items: center;
     font-size: 13px;
@@ -42,7 +41,7 @@
     padding: 2px 10px;
     background: #ece9e9;
     font-weight: 400;
-    img{
+    img {
       margin-right: 5px;
       width: 15px;
       height: 15px;
@@ -51,7 +50,7 @@
   }
 }
 .popupHeaderWithoutCloseIcon {
-  padding: 20px 30px 10px 30px;
+  padding: 10px;
 }
 .popupFooter,
 .popupFooterConfirmation,
@@ -142,8 +141,8 @@
   min-height: 350px;
   @extend .flexCenter;
 }
-.wordDocumentpreview{
-  .p-dialog-header{
+.wordDocumentpreview {
+  .p-dialog-header {
     background-color: #f0f0f0;
   }
 }
