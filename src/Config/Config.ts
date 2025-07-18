@@ -3,6 +3,7 @@ const SPLists = {
   BedLogList: "BedLog",
   ShelterConfigList: "ShelterConfig",
   RequestList: "Request",
+  RequestLogList: "RequestLog",
 };
 
 const SPLibraries = {

@@ -571,7 +571,7 @@ const ShelterConfig: React.FC = () => {
           />
           <CustomButton
             btnType="primaryBtn"
-            // icon="pi pi-plus"
+            icon="pi pi-plus-circle"
             onClick={openAddFormPopup}
             text="Add Shelter"
           />

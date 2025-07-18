@@ -11,9 +11,11 @@
   width: 100%;
 }
 
-.p-dialog .p-dialog-content:has(.dashboard-design) {
+.p-dialog .p-dialog-content:has(.dashboard-design),
+.p-dialog-mask:has(.requestlog-Design) .p-dialog-content {
   display: block !important;
 }
+
 .delPopup .p-dialog-content {
   display: block !important;
 }
@@ -23,7 +25,8 @@
   box-shadow: 0px -11px 40px 0px #7b5abb4d;
   z-index: 100;
 }
-.p-dialog:has(.dashboard-design) .p-dialog-header {
+.p-dialog:has(.dashboard-design) .p-dialog-header,
+.p-dialog-mask:has(.requestlog-Design) .p-dialog-header {
   padding: 10px !important;
 }
 .delPopup .p-dialog-header {
