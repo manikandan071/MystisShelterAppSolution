@@ -13,6 +13,8 @@ import { sp } from "@pnp/sp/presets/all";
 import * as moment from "moment";
 import { IconField } from "primereact/iconfield";
 import { Dropdown } from "primereact/dropdown";
+import { SPLists } from "../../../../Config/Config";
+import Loader from "../Loader/Loader";
 
 interface Iuser {
   Id: number | null;
@@ -39,6 +41,7 @@ interface IData {
   dateofrequest: Date | null;
   comments: string;
   status: string;
+  prevstatus: string;
   client: string;
   clientemail: string;
   files: Ifile[];
@@ -47,12 +50,25 @@ interface IData {
   approvercomments: string;
   bed: string;
   shelter: string;
+  closedate: Date | null;
+  requestlog: IRequestLogData[];
+  bedneededon: Date | null;
+}
+interface IRequestLogData {
+  id: number | null;
+  requestId: number | null;
+  status: string;
+  role: string;
+  userid: number | null;
+  username: string;
+  comments: string;
 }
 interface IBedData {
   id: number | null;
   bed: string;
   shelterid: number | null;
   sheltername: string;
+  status: string;
 }
 interface Ifile {
   etag: string;
@@ -69,6 +85,7 @@ let requestDetails: IData = {
   dateofrequest: null,
   comments: "",
   status: "",
+  prevstatus: "",
   client: "",
   clientemail: "",
   files: [],
@@ -77,11 +94,14 @@ let requestDetails: IData = {
   approvercomments: "",
   bed: "",
   shelter: "",
+  closedate: null,
+  requestlog: [],
+  bedneededon: null,
 };
 interface IDialogDetails {
   condition: boolean;
   data: any;
-  type: "add" | "edit" | "delete" | "view" | "";
+  type: "add" | "edit" | "delete" | "view" | "workflow" | "";
 }
 let _dialog: IDialogDetails = {
   condition: false,
@@ -95,23 +115,36 @@ interface IDrpdownOptions {
 interface IDrpdowns {
   bed: IDrpdownOptions[];
   shelter: IDrpdownOptions[];
-  client: IDrpdownOptions[];
+  filterclient: IDrpdownOptions[];
+  filterstatus: IDrpdownOptions[];
   status: IDrpdownOptions[];
 }
-
+interface IFilterkeys {
+  status: IDrpdownOptions[];
+  client: IDrpdownOptions[];
+  search: string;
+}
 const Dashboard = (props: IProps): JSX.Element => {
   let _dd: IDrpdowns = {
     bed: [],
     shelter: [],
-    client: [],
+    filterclient: [],
+    filterstatus: [],
     status: [],
   };
-
+  const _fkeys: IFilterkeys = {
+    status: [],
+    client: [],
+    search: "",
+  };
   const [dialog, setdialog] = useState<IDialogDetails>(_dialog);
   const [masterData, setmasterData] = useState<any[]>([]);
   const [masterBedData, setmasterBedData] = useState<IBedData[]>([]);
+  const [masterBedLogData, setmasterBedLogData] = useState<IBedData[]>([]);
   const [drpdowns, setdrpdowns] = useState<IDrpdowns>({ ..._dd });
-
+  const [filterkeys, setfilterkeys] = useState<IFilterkeys>({ ..._fkeys });
+  const [filterData, setfilterData] = useState<IData[]>([]);
+  const [loader, setloader] = useState<boolean>(false);
   //Star function
   const asterisk = (): any => {
     return <span style={{ color: "red" }}>*</span>;
@@ -133,7 +166,7 @@ const Dashboard = (props: IProps): JSX.Element => {
       _formData.data[`${key}`] = _files;
     } else if (key === "shelter") {
       let _dropdown = { ...drpdowns };
-      let _bedDropDown: any = masterBedData.filter(
+      let _bedDropDown: any = [...masterBedData].filter(
         (e: any) => e.shelterid === value
       );
       for (let data of _bedDropDown) {
@@ -155,56 +188,78 @@ const Dashboard = (props: IProps): JSX.Element => {
   const errFunction = (err: string, funcName: string): void => {
     console.log(err, funcName);
   };
-  //get bed details
-  const getBedDetails = () => {
+  //get bedlog data
+  const getBedLogData = (
+    _allData: any,
+    _dropdown: any,
+    _masterBedData: any
+  ) => {
     sp.web.lists
-      .getByTitle("BedConfig")
+      .getByTitle(SPLists.BedLogList)
+      .items.select("*", "Shelter/ID,Shelter/Title", "Bed/Id", "Bed/Title")
+      .expand("Shelter", "Bed")
+      .filter(`AvailabilityStatus eq 'Occupied'`)
+      .top(5000)
+      .get()
+      .then(async (items) => {
+        let _masterBedLogData: IBedData[] = [];
+        for (let data of items) {
+          _masterBedLogData.push({
+            id: data.Id,
+            bed: data.Bed.Id,
+            shelterid: data.Shelter.ID,
+            sheltername: data.Shelter.Title,
+            status: data.AvailabilityStatus,
+          });
+        }
+        setmasterBedData([..._masterBedData]);
+        setmasterData([..._allData]);
+        setfilterData([..._allData]);
+        setdrpdowns({ ..._dropdown });
+        setmasterBedLogData(_masterBedLogData);
+        setloader(false);
+      })
+      .catch((err) => errFunction("Error get bed log items:", err));
+  };
+  //get bed details
+  const getBedDetails = (_allData: any, _dropdown: any) => {
+    sp.web.lists
+      .getByTitle(SPLists.BedConfigList)
       .items.select("*", "Shelter/ID,Shelter/Title")
       .expand("Shelter")
       .top(5000)
-      .filter(`IsDelete ne 1 and AvailabilityStatus eq 'Available'`)
+      .filter(`IsDelete ne 1`)
       .get()
       .then(async (items) => {
-        let _dropdown = { ...drpdowns };
         let _masterBedData: IBedData[] = [];
         for (let data of items) {
-          if (data.Shelter !== null) {
-            const shelterCode = data.Shelter.ID;
-            const shelterName = data.Shelter.Title;
-            if (
-              !_dropdown.shelter.some((item: any) => item.code === shelterCode)
-            ) {
-              _dropdown.shelter.push({
-                code: shelterCode,
-                name: shelterName,
-              });
-            }
-          }
           _masterBedData.push({
             id: data.Id,
             bed: data.Title,
             shelterid: data.Shelter.ID,
             sheltername: data.Shelter.Title,
+            status: data.AvailabilityStatus,
           });
         }
-        setmasterBedData([..._masterBedData]);
-        setdrpdowns({ ..._dropdown });
+        getBedLogData(_allData, _dropdown, _masterBedData);
       })
-      .catch((err) => {
-        console.error("Error get bed items:", err);
-      });
+      .catch((err) => errFunction("Error get bed config items:", err));
   };
   //get request data
-  const getRequest = () => {
+  const getRequest = (_masterRequestLogData: any) => {
     sp.web.lists
-      .getByTitle("Request")
+      .getByTitle(SPLists.RequestList)
       .items.select(
         "*",
         "RequestedBy/Id",
         "RequestedBy/EMail",
-        "AttachmentFiles"
+        "AttachmentFiles",
+        "Bed/Id",
+        "Bed/Title",
+        "Shelter/Id",
+        "Shelter/Title"
       )
-      .expand("RequestedBy", "AttachmentFiles")
+      .expand("RequestedBy", "AttachmentFiles", "Bed", "Shelter")
       .top(5000)
       .filter(`IsDelete ne 1`)
       .get()
@@ -223,6 +278,9 @@ const Dashboard = (props: IProps): JSX.Element => {
               };
             }
           );
+          let requestlogdata: any = _masterRequestLogData?.filter(
+            (e: any) => e.requestId === data.Id
+          );
 
           _allData.push({
             id: data.Id,
@@ -237,39 +295,69 @@ const Dashboard = (props: IProps): JSX.Element => {
             bedoccupiedon: data.BedOccupiedOn
               ? new Date(data.BedOccupiedOn)
               : null,
+            bedneededon: data.BedNeededOn ? new Date(data.BedNeededOn) : null,
             dateofrequest: moment(data.DateofRequest).format("DD/MM/YYYY"),
             comments: data.Comments,
             status: data.Status,
+            prevstatus: data.Status,
             client: data.Client,
             clientemail: data.ClientEmail,
             files: arrAttach || [],
             nextlevel: data.NextLevel,
             approvercomments: "",
             approvaljson: JSON.parse(data.ApprovalJson),
-            bed: "",
-            shelter: "",
+            bed: data.Bed?.Id ? data.Bed.Id : null,
+            shelter: data.Shelter?.Id ? data.Shelter.Id : null,
+            closedate: data.BedClosedOn ? data.BedClosedOn : null,
+            requestlog: requestlogdata ? requestlogdata : [],
           });
 
-          _dropdown.client.push({
+          _dropdown.filterclient.push({
             code: data.Id,
             name: data.Client,
           });
           if (
-            !_dropdown.status.some((item: any) => item.name === data.Status)
+            !_dropdown.filterstatus.some(
+              (item: any) => item.name === data.Status
+            )
           ) {
-            _dropdown.status.push({
+            _dropdown.filterstatus.push({
               code: data.Id,
               name: data.Status,
             });
           }
         }
-        setdrpdowns({ ..._dropdown });
-        setmasterData(_allData);
-        getBedDetails();
+        // setdrpdowns({ ..._dropdown });
+        getBedDetails(_allData, _dropdown);
       })
-      .catch((err) => {
-        console.error("Error get request items:", err);
-      });
+      .catch((err) => errFunction("Error get request items:", err));
+  };
+  //get request log data
+  const getRequestLogData = () => {
+    sp.web.lists
+      .getByTitle(SPLists.RequestLogList)
+      .items.select("*", "User/Id,User/EMail")
+      .expand("User")
+      .top(5000)
+      .get()
+      .then(async (items) => {
+        let _masterRequestLogData: IRequestLogData[] = [];
+        for (let data of items) {
+          _masterRequestLogData.push({
+            id: data.Id,
+            requestId: data.RequestIdId,
+            status: data.Status,
+            role: data.Role,
+            userid: data.User.Id,
+            username: props.allUser
+              ? props.allUser.filter((e) => e.Id === data.User.Id)[0]?.Title
+              : "",
+            comments: data.Comments,
+          });
+        }
+        getRequest(_masterRequestLogData);
+      })
+      .catch((err) => errFunction("Error get bed log items:", err));
   };
   //Add request
   const addRequest = (requestData: any) => {
@@ -289,11 +377,11 @@ const Dashboard = (props: IProps): JSX.Element => {
     ];
 
     let _curData: any = {
-      BedOccupiedOn: requestData.bedoccupiedon,
+      BedNeededOn: requestData.bedneededon,
       Comments: requestData.comments,
       Client: requestData.client,
       ClientEmail: requestData.clientemail,
-      Status: "Pending with Billing Team",
+      Status: "Submitted by Supervisor",
       RequestedById: props.allUser.filter(
         (e) => e.Email == props.CurrentUser
       )[0].Id,
@@ -312,12 +400,12 @@ const Dashboard = (props: IProps): JSX.Element => {
       }
     }
     sp.web.lists
-      .getByTitle("Request")
+      .getByTitle(SPLists.RequestList)
       .items.add(_curData)
       .then(async (res) => {
         if (_saveFile.length > 0) {
           await sp.web.lists
-            .getByTitle("Request")
+            .getByTitle(SPLists.RequestList)
             .items.getById(res.data.Id)
             .attachmentFiles.addMultiple(_saveFile);
         }
@@ -332,12 +420,12 @@ const Dashboard = (props: IProps): JSX.Element => {
             : "",
         };
         await sp.web.lists
-          .getByTitle("RequestLog")
+          .getByTitle(SPLists.RequestLogList)
           .items.add(logData)
           .then(async (res) => {
             props.toastFunc("success", "Success", "Request added successfully");
             setdialog({ ..._dialog });
-            getRequest();
+            getRequestLogData();
           });
       })
       .catch((err: any) => errFunction(err, "addRequest"));
@@ -360,31 +448,32 @@ const Dashboard = (props: IProps): JSX.Element => {
     ];
     let _curData: any = {
       BedOccupiedOn: requestData.bedoccupiedon,
+      BedNeededOn: requestData.bedneededon,
       Comments: requestData.comments,
       Client: requestData.client,
       ClientEmail: requestData.clientemail,
       Status:
-        requestData.status === "Rejected by Billing Team" ||
-        requestData.status === "Rejected by COA"
-          ? "Pending with Billing Team"
-          : requestData.status === "Approved"
+        requestData.prevstatus === "Rejected by Billing Team" ||
+        requestData.prevstatus === "Rejected by COA"
+          ? "Submitted by Supervisor"
+          : requestData.prevstatus === "Approved"
           ? "Occupied"
           : requestData.status,
       IsDelete: isDelete,
       NextLevel:
-        requestData.status === "Rejected by Billing Team" ||
-        requestData.status === "Rejected by COA"
+        requestData.prevstatus === "Rejected by Billing Team" ||
+        requestData.prevstatus === "Rejected by COA"
           ? 2
           : requestData.nextlevel,
       ApprovalJson:
-        requestData.status === "Rejected by Billing Team" ||
-        requestData.status === "Rejected by COA"
+        requestData.prevstatus === "Rejected by Billing Team" ||
+        requestData.prevstatus === "Rejected by COA"
           ? JSON.stringify(approvaljsonvalue)
           : JSON.stringify(requestData.approvaljson),
       ShelterId: requestData.shelter ? requestData.shelter : null,
       BedId: requestData.bed ? requestData.bed : null,
+      BedClosedOn: requestData.prevstatus === "Occupied" ? new Date() : null,
     };
-
     let _saveFile: any = [];
     for (let saveFile of requestData.files) {
       if (saveFile.type === "New") {
@@ -403,33 +492,92 @@ const Dashboard = (props: IProps): JSX.Element => {
         });
       }
     }
-    let logData: any = {
-      RequestIdId: requestData.id,
-      Role: props.CurrentRole,
-      UserId: props.allUser.filter((e) => e.Email == props.CurrentUser)[0].Id,
-      Status: "Submitted",
-      Comments: "",
-    };
+
     sp.web.lists
-      .getByTitle("Request")
+      .getByTitle(SPLists.RequestList)
       .items.getById(requestData.id)
       .update(_curData)
       .then(async (res) => {
         if (_deleteFile.length > 0) {
           for (let i = 0; i < _deleteFile.length; i++) {
             await sp.web.lists
-              .getByTitle("Request")
+              .getByTitle(SPLists.RequestList)
               .items.getById(requestData.id)
               .attachmentFiles.getByName(_deleteFile[i].name)
               .delete();
           }
         } else if (_saveFile.length > 0) {
           await sp.web.lists
-            .getByTitle("Request")
+            .getByTitle(SPLists.RequestList)
             .items.getById(requestData.id)
             .attachmentFiles.addMultiple(_saveFile);
-        } else if (!isDelete && requestData.status !== "Approved") {
-          await sp.web.lists.getByTitle("RequestLog").items.add(logData);
+        } else if (
+          !isDelete &&
+          requestData.prevstatus !== "Approved" &&
+          requestData.prevstatus !== "Occupied" &&
+          requestData.prevstatus !== "Submitted by Supervisor"
+        ) {
+          let logData: any = {
+            RequestIdId: requestData.id,
+            Role: props.CurrentRole,
+            UserId: props.allUser.filter((e) => e.Email == props.CurrentUser)[0]
+              .Id,
+            Status: "Submitted",
+            Comments: "",
+          };
+          await sp.web.lists
+            .getByTitle(SPLists.RequestLogList)
+            .items.add(logData);
+        } else if (requestData.prevstatus === "Approved") {
+          let BedConfigData: any = {
+            AvailabilityStatus: "Occupied",
+            Client: requestData.client,
+            ClientEmail: requestData.clientemail,
+            BedOccupiedOn: requestData.bedoccupiedon,
+          };
+          let BedlogData: any = {
+            BedId: requestData.bed,
+            AvailabilityStatus: "Occupied",
+            ShelterId: requestData.shelter,
+            Client: requestData.client,
+            ClientEmail: requestData.clientemail,
+            BedOccupiedOn: requestData.bedoccupiedon,
+          };
+          await sp.web.lists
+            .getByTitle(SPLists.BedConfigList)
+            .items.getById(requestData.bed)
+            .update(BedConfigData);
+          await sp.web.lists
+            .getByTitle(SPLists.BedLogList)
+            .items.add(BedlogData);
+        } else if (requestData.prevstatus === "Occupied") {
+          let BedConfigData: any = {
+            AvailabilityStatus: "Available",
+            Client: "",
+            ClientEmail: "",
+            BedOccupiedOn: null,
+          };
+          let BedlogData: any = {
+            BedId: requestData.bed,
+            AvailabilityStatus: "Closed",
+            ShelterId: requestData.shelter,
+            Client: requestData.client,
+            ClientEmail: requestData.clientemail,
+            BedOccupiedOn: requestData.bedoccupiedon,
+            BedClosedOn: new Date(),
+          };
+          let bedlogItem = masterBedLogData.find(
+            (e) => e.bed === requestData.bed
+          );
+          let bedlogId: number | null = bedlogItem ? bedlogItem.id : null;
+          await sp.web.lists
+            .getByTitle(SPLists.BedConfigList)
+            .items.getById(requestData.bed)
+            .update(BedConfigData);
+          await sp.web.lists
+            .getByTitle(SPLists.BedLogList)
+            .items.getById(Number(bedlogId))
+            .update(BedlogData);
         }
         isDelete
           ? props.toastFunc(
@@ -443,7 +591,7 @@ const Dashboard = (props: IProps): JSX.Element => {
               "Request updated successfully"
             );
         setdialog({ ..._dialog });
-        getRequest();
+        getRequestLogData();
       })
       .catch((err) => errFunction(err, "updateRequest"));
   };
@@ -454,11 +602,10 @@ const Dashboard = (props: IProps): JSX.Element => {
         ? { ...item, RoleEmail: props.CurrentUser, Status: "Approved" }
         : item
     );
-
     let _curData: any = {
       Status:
         requestData.nextlevel === 2 && BtnType === "Approved"
-          ? "Pending with COA"
+          ? "Approved by Billing Team"
           : requestData.nextlevel === 2 && BtnType === "Rejected"
           ? "Rejected by Billing Team"
           : requestData.nextlevel === 3 && BtnType === "Approved"
@@ -482,12 +629,12 @@ const Dashboard = (props: IProps): JSX.Element => {
       Comments: requestData.approvercomments,
     };
     sp.web.lists
-      .getByTitle("Request")
+      .getByTitle(SPLists.RequestList)
       .items.getById(requestData.id)
       .update(_curData)
       .then(async (res) => {
         await sp.web.lists
-          .getByTitle("RequestLog")
+          .getByTitle(SPLists.RequestLogList)
           .items.add(logData)
           .then(async (res) => {
             props.toastFunc(
@@ -496,7 +643,7 @@ const Dashboard = (props: IProps): JSX.Element => {
               `Request ${BtnType} successfully`
             );
             setdialog({ ..._dialog });
-            getRequest();
+            getRequestLogData();
           });
       })
       .catch((err) => errFunction(err, "Approverfunction"));
@@ -516,18 +663,27 @@ const Dashboard = (props: IProps): JSX.Element => {
         : true
     ) {
       props.toastFunc("error", "Error", "Please enter the correct email");
-    } else if (dialog.data.bedoccupiedon === null) {
-      props.toastFunc("error", "Error", "Please select the bed occupied on");
+    } else if (dialog.data.bedneededon === null) {
+      props.toastFunc("error", "Error", "Please select the bed needed on");
     } else if (dialog.data.approvercomments === "" && BtnType === "Rejected") {
       props.toastFunc("error", "Error", "Please enter approver comments");
     } else if (
+      dialog.data.bedoccupiedon === null &&
+      dialog.data.prevstatus === "Approved"
+    ) {
+      props.toastFunc("error", "Error", "Please select the bed occupied on");
+    } else if (
       dialog.data.shelter === "" &&
-      dialog.data.status === "Approved"
+      dialog.data.prevstatus === "Approved"
     ) {
       props.toastFunc("error", "Error", "Please select shelter");
-    } else if (dialog.data.bed === "" && dialog.data.status === "Approved") {
+    } else if (
+      dialog.data.bed === "" &&
+      dialog.data.prevstatus === "Approved"
+    ) {
       props.toastFunc("error", "Error", "Please select bed");
     } else {
+      setloader(true);
       if (BtnType === "Submit") {
         if (dialog.type === "add") {
           addRequest({ ...dialog.data });
@@ -579,21 +735,27 @@ const Dashboard = (props: IProps): JSX.Element => {
       color: "",
     };
     if (
-      data.status == "Rejected by Billing Team" ||
-      data.status == "Rejected by COA"
+      data.prevstatus == "Rejected by Billing Team" ||
+      data.prevstatus == "Rejected by COA"
     ) {
       _stsObj = {
         borderColor: "#f77575",
         bgColor: "#f7e6e6",
         color: "#d32929",
       };
-    } else if (data.status == "Completed" || data.status == "Approved") {
+    } else if (data.prevstatus == "Approved") {
       _stsObj = {
         borderColor: "#AED9AA",
         bgColor: "#F8FFF8",
         color: "#1A8812",
       };
-    } else if (data.status == "Occupied") {
+    } else if (data.prevstatus == "Closed") {
+      _stsObj = {
+        borderColor: "#FFBF00",
+        bgColor: "#ffbf001a",
+        color: "#a78110",
+      };
+    } else if (data.prevstatus == "Occupied") {
       _stsObj = {
         borderColor: "#95d9e2",
         bgColor: "#e6f4f7",
@@ -601,9 +763,9 @@ const Dashboard = (props: IProps): JSX.Element => {
       };
     } else {
       _stsObj = {
-        borderColor: "#dee295",
-        bgColor: "#f7f6e6",
-        color: "#958a0e",
+        borderColor: "#007bff",
+        bgColor: "#b9d6f566",
+        color: "#0b4687",
       };
     }
     return (
@@ -614,22 +776,26 @@ const Dashboard = (props: IProps): JSX.Element => {
           color: _stsObj.color,
         }}
         className={styles.pillDesign}
-        title={data.status}
+        title={data.prevstatus}
       >
-        {data.status == "Rejected by Billing Team" ||
-        data.status == "Rejected by COA" ? (
+        {data.prevstatus == "Rejected by Billing Team" ||
+        data.prevstatus == "Rejected by COA" ? (
           <i className="pi pi-times-circle" />
-        ) : data.status == "Completed" || data.status == "Approved" ? (
+        ) : data.prevstatus == "Approved" ? (
           <i className="pi pi-check-circle" />
+        ) : data.prevstatus == "Closed" ? (
+          <i className="pi pi-lock" />
+        ) : data.prevstatus == "Occupied" ? (
+          <i className="pi pi-users" />
         ) : (
-          <i className="pi pi-history" />
+          <i className="pi pi-check" />
         )}
-        {data.status}
+        {data.prevstatus}
       </div>
     );
   };
   //Action template
-  const actionTemplate = (data: any) => {
+  const actionTemplate = (item: any) => {
     return (
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {props.CurrentRole === "Supervisor" ? (
@@ -639,32 +805,92 @@ const Dashboard = (props: IProps): JSX.Element => {
               title="view"
               style={{ color: "#0a194b", cursor: "pointer" }}
               onClick={() =>
-                setdialog({ condition: true, data: data, type: "view" })
+                setdialog({ condition: true, data: item, type: "view" })
               }
             />
 
-            {(data.nextlevel === 0 || data.status === "Approved") &&
-              props.CurrentRole === "Supervisor" && (
+            {(item.nextlevel === 0 ||
+              item.nextlevel === 2 ||
+              item.prevstatus === "Approved" ||
+              item.prevstatus === "Occupied") &&
+              props.CurrentRole === "Supervisor" &&
+              item.requestedemail === props.CurrentUser && (
                 <i
                   className="pi pi-pen-to-square"
                   title="edit"
                   style={{ color: "#1A8812", cursor: "pointer" }}
-                  onClick={() =>
-                    setdialog({ condition: true, data: data, type: "edit" })
-                  }
+                  onClick={() => {
+                    if (item.bed) {
+                      let _dropdown = { ...drpdowns };
+                      let _bedDropDown: any[] = [...masterBedData].filter(
+                        (e: any) => e.id === item.bed
+                      );
+                      for (let data of _bedDropDown) {
+                        _dropdown.bed.push({
+                          code: data.id,
+                          name: data.bed,
+                        });
+                      }
+                      setdrpdowns({ ..._dropdown });
+                    }
+                    if (item.prevstatus === "Occupied") {
+                      let _dropdown = { ...drpdowns };
+                      _dropdown.status = [
+                        { code: item.prevstatus, name: item.prevstatus },
+                        { code: "Closed", name: "Closed" },
+                      ];
+                      let ShelterDrpDown: any = masterBedData.find(
+                        (e) => e.shelterid === item.shelter
+                      );
+                      _dropdown.shelter = [
+                        {
+                          code: item.shelter,
+                          name: ShelterDrpDown.sheltername,
+                        },
+                      ];
+                      setdrpdowns({ ..._dropdown });
+                    } else if (item.prevstatus === "Approved") {
+                      let _dropdown = { ...drpdowns };
+
+                      let ShelterDrpDown: any = masterBedData.filter(
+                        (e) => e.status === "Available"
+                      );
+
+                      if (ShelterDrpDown.length > 0) {
+                        for (let data of ShelterDrpDown) {
+                          const shelterCode = data.shelterid;
+                          const shelterName = data.sheltername;
+                          if (
+                            !_dropdown.shelter.some(
+                              (item: any) => data.code === shelterCode
+                            )
+                          ) {
+                            _dropdown.shelter.push({
+                              code: shelterCode,
+                              name: shelterName,
+                            });
+                          }
+                        }
+                        setdrpdowns({ ..._dropdown });
+                      }
+                    }
+
+                    setdialog({ condition: true, data: item, type: "edit" });
+                  }}
                 />
               )}
-
-            <i
-              className="pi pi-trash"
-              title="delete"
-              style={{ color: "#f54242", cursor: "pointer" }}
-              onClick={() =>
-                setdialog({ condition: true, data: data, type: "delete" })
-              }
-            />
+            {item.requestedemail === props.CurrentUser ? (
+              <i
+                className="pi pi-trash"
+                title="delete"
+                style={{ color: "#f54242", cursor: "pointer" }}
+                onClick={() => {
+                  setdialog({ condition: true, data: item, type: "delete" });
+                }}
+              />
+            ) : null}
           </>
-        ) : data.nextlevel === 3 &&
+        ) : item.nextlevel === 3 &&
           props.CurrentRole === "Chief of Approval" ? (
           <>
             <i
@@ -672,18 +898,18 @@ const Dashboard = (props: IProps): JSX.Element => {
               title="Review"
               style={{ color: "#005bbb", cursor: "pointer" }}
               onClick={() =>
-                setdialog({ condition: true, data: data, type: "view" })
+                setdialog({ condition: true, data: item, type: "view" })
               }
             />
           </>
-        ) : data.nextlevel === 2 && props.CurrentRole === "Billing Team" ? (
+        ) : item.nextlevel === 2 && props.CurrentRole === "Billing Team" ? (
           <>
             <i
               className="pi pi-file-check"
               title="Review"
               style={{ color: "#005bbb", cursor: "pointer" }}
               onClick={() =>
-                setdialog({ condition: true, data: data, type: "view" })
+                setdialog({ condition: true, data: item, type: "view" })
               }
             />
           </>
@@ -692,19 +918,63 @@ const Dashboard = (props: IProps): JSX.Element => {
           className="pi pi-history"
           title="Review"
           style={{ color: "#005bbb", cursor: "pointer" }}
-          //   onClick={() =>
-          //     setdialog({ condition: true, data: data, type: "edit" })
-          //   }
+          onClick={(e) => {
+            e.stopPropagation();
+            setdialog({
+              condition: true,
+              data: item,
+              type: "workflow",
+            });
+          }}
         />
       </div>
     );
   };
+  //filter function
+  const filterFunc = (key: string, value: any): void => {
+    let _filterkeys: any = { ...filterkeys };
+    let _filterdata: IData[] = [...masterData];
+
+    _filterkeys[key] = value;
+    if (_filterkeys.status.code) {
+      _filterdata = _filterdata.filter(
+        (_d: IData) => _filterkeys.status?.name === _d.status
+      );
+    }
+
+    if (_filterkeys.client.code) {
+      _filterdata = _filterdata.filter(
+        (_d: IData) => _filterkeys.client?.name === _d.client
+      );
+    }
+    if (_filterkeys.search.trim() != "") {
+      _filterdata = _filterdata.filter((_d: IData) => {
+        let _searchValue: string = value.toLowerCase();
+        return (
+          (_d.client && _d.client.toLowerCase().includes(_searchValue)) ||
+          (_d.requestedby &&
+            _d.requestedby.toLowerCase().includes(_searchValue)) ||
+          (_d.dateofrequest &&
+            _d.dateofrequest.toString().includes(_searchValue)) ||
+          (_d.bedoccupiedon &&
+            _d.bedoccupiedon.toString().includes(_searchValue)) ||
+          (_d.status && _d.status.toLowerCase().includes(_searchValue))
+        );
+      });
+    }
+
+    setfilterkeys({ ..._filterkeys });
+    setfilterData([..._filterdata]);
+  };
   useEffect(() => {
-    getRequest();
+    setloader(true);
+    getRequestLogData();
   }, []);
   return (
     <>
-      {
+      {loader ? (
+        <Loader />
+      ) : (
         <div className={styles.maincontainer}>
           <div>
             <section className={styles.headingSection}>
@@ -720,7 +990,7 @@ const Dashboard = (props: IProps): JSX.Element => {
                     display: "flex",
                     gap: 10,
                     justifyContent: "flex-end",
-                    alignItems: "flex-end",
+                    alignItems: "center",
                   }}
                 >
                   <div className="dashBoardFilter">
@@ -749,51 +1019,57 @@ const Dashboard = (props: IProps): JSX.Element => {
                         }}
                       />
                       <Dropdown
-                        // value={dialog.data.shelter || ""}
-                        // onChange={(e) => onChangeHandler("shelter", e.value)}
-                        options={drpdowns.client}
+                        value={filterkeys.client}
+                        onChange={(e) => filterFunc("client", e.value)}
+                        options={drpdowns.filterclient}
                         optionLabel="name"
-                        optionValue="code"
                         placeholder="Select a client"
                       />
                       <Dropdown
-                        // value={dialog.data.shelter || ""}
-                        // onChange={(e) => onChangeHandler("shelter", e.value)}
-                        options={drpdowns.status}
+                        value={filterkeys.status}
+                        onChange={(e) => filterFunc("status", e.value)}
+                        options={drpdowns.filterstatus}
                         optionLabel="name"
-                        optionValue="code"
                         placeholder="Select a status"
                       />
                       <IconField iconPosition="left">
                         <InputIcon
                           className="pi pi-search"
                           style={{ padding: "0px 5px", fontSize: "16px" }}
-                        >
-                          {" "}
-                        </InputIcon>
-                        <InputText placeholder="Search" />
+                        ></InputIcon>
+                        <InputText
+                          placeholder="Search"
+                          onChange={(e) => filterFunc("search", e.target.value)}
+                          value={filterkeys.search}
+                        />
                       </IconField>
+                      <Button
+                        label=""
+                        icon="pi pi-sync"
+                        onClick={() => {
+                          setfilterData([...masterData]);
+                          setfilterkeys({ ..._fkeys });
+                        }}
+                      />
                     </div>
                   </div>
 
-                  <div className="dashBoardFilter">
-                    {props.CurrentRole === "Supervisor" ? (
-                      <Button
-                        label="New Request"
-                        icon="pi pi-plus-circle"
-                        onClick={() =>
-                          setdialog({
-                            ..._dialog,
-                            data: { ...requestDetails },
-                            condition: true,
-                            type: "add",
-                          })
-                        }
-                      />
-                    ) : (
-                      ""
-                    )}
-                  </div>
+                  {props.CurrentRole === "Supervisor" ? (
+                    <Button
+                      label="New Request"
+                      icon="pi pi-plus-circle"
+                      onClick={() =>
+                        setdialog({
+                          ..._dialog,
+                          data: { ...requestDetails },
+                          condition: true,
+                          type: "add",
+                        })
+                      }
+                    />
+                  ) : (
+                    ""
+                  )}
                 </div>
               </div>
             </section>
@@ -803,10 +1079,10 @@ const Dashboard = (props: IProps): JSX.Element => {
             <DataTable
               emptyMessage="No data found"
               //   className={!masterData.length && "nodata"}
-              value={masterData}
+              value={filterData}
               tableStyle={{ width: "100%" }}
               //   selectionMode={"single"}
-              paginator={masterData.length ? true : false}
+              paginator={filterData.length ? true : false}
               rows={10}
             >
               <Column
@@ -860,7 +1136,7 @@ const Dashboard = (props: IProps): JSX.Element => {
                     >
                       {item.bedoccupiedon
                         ? moment(item.bedoccupiedon).format("DD/MM/YYYY")
-                        : null}
+                        : "-"}
                     </div>
                   );
                 }}
@@ -888,285 +1164,407 @@ const Dashboard = (props: IProps): JSX.Element => {
               <Column
                 field=""
                 header="Action"
-                body={actionTemplate}
+                body={(item) => {
+                  return actionTemplate(item);
+                }}
                 style={{ width: "10%" }}
               />
             </DataTable>
           </div>
           {/* modal popup */}
-          <Dialog
-            header={`${
-              dialog.type === "add"
-                ? "New"
-                : dialog.type === "view" && props.CurrentRole === "Supervisor"
-                ? "View"
-                : dialog.data.nextlevel === 2 || dialog.data.nextlevel === 3
-                ? "Approve"
-                : "Edit"
-            } Request`}
-            visible={dialog.condition && dialog.type !== "delete"}
-            style={{ width: "60%" }}
-            onHide={(): void => undefined}
-            className="dialogCloseIcon"
-          >
-            <div className={`${styles.modalBodyFlex}  dashboard-design`}>
-              <div className={styles.fieldssm}>
-                <label>
-                  Client Name {dialog.type === "view" ? "" : asterisk()}
-                </label>
-                <InputText
-                  placeholder="Enter here"
-                  value={dialog.data.client}
-                  onChange={(e) => onChangeHandler("client", e.target.value)}
-                  disabled={
-                    dialog.type === "view" || dialog.data.status === "Approved"
-                      ? true
-                      : false
-                  }
-                />
-              </div>
+          {dialog.condition &&
+          (dialog.type === "add" ||
+            dialog.type === "edit" ||
+            dialog.type === "view") ? (
+            <Dialog
+              header={`${
+                dialog.type === "add"
+                  ? "New"
+                  : dialog.type === "view" && props.CurrentRole === "Supervisor"
+                  ? "View"
+                  : dialog.data.nextlevel === 2 || dialog.data.nextlevel === 3
+                  ? "Approve"
+                  : "Edit"
+              } Request`}
+              visible={dialog.condition}
+              style={{ width: "60%" }}
+              onHide={(): void => setdialog({ ..._dialog })}
+              className="dialogCloseIcon"
+            >
+              <div className={`${styles.modalBodyFlex}  dashboard-design`}>
+                <div className={styles.fieldssm}>
+                  <label>
+                    Client Name {dialog.type === "view" ? "" : asterisk()}
+                  </label>
+                  <InputText
+                    placeholder="Enter here"
+                    value={dialog.data.client}
+                    onChange={(e) => onChangeHandler("client", e.target.value)}
+                    disabled={
+                      dialog.type === "view" ||
+                      dialog.data.prevstatus === "Approved" ||
+                      dialog.data.prevstatus === "Occupied"
+                        ? true
+                        : false
+                    }
+                  />
+                </div>
 
-              <div className={styles.fieldssm}>
-                <label>
-                  Client Email {dialog.type === "view" ? "" : asterisk()}
-                </label>
-                <InputText
-                  placeholder="Enter here"
-                  value={dialog.data.clientemail}
-                  onChange={(e) =>
-                    onChangeHandler("clientemail", e.target.value)
-                  }
-                  disabled={
-                    dialog.type === "view" || dialog.data.status === "Approved"
-                      ? true
-                      : false
-                  }
-                />
+                <div className={styles.fieldssm}>
+                  <label>
+                    Client Email {dialog.type === "view" ? "" : asterisk()}
+                  </label>
+                  <InputText
+                    placeholder="Enter here"
+                    value={dialog.data.clientemail}
+                    onChange={(e) =>
+                      onChangeHandler("clientemail", e.target.value)
+                    }
+                    disabled={
+                      dialog.type === "view" ||
+                      dialog.data.prevstatus === "Approved" ||
+                      dialog.data.prevstatus === "Occupied"
+                        ? true
+                        : false
+                    }
+                  />
+                </div>
+                <div className={styles.fieldssm}>
+                  <label>
+                    Bed Needed On {dialog.type === "view" ? "" : asterisk()}
+                  </label>
+                  <Calendar
+                    value={dialog.data.bedneededon}
+                    onChange={(e) => onChangeHandler("bedneededon", e.value)}
+                    placeholder="Select start date"
+                    dateFormat="dd/mm/yy"
+                    showIcon
+                    className="FormCalender"
+                    disabled={
+                      dialog.type === "view" ||
+                      dialog.data.prevstatus === "Approved" ||
+                      dialog.data.prevstatus === "Occupied"
+                        ? true
+                        : false
+                    }
+                  />
+                </div>
               </div>
-              <div className={styles.fieldssm}>
-                <label>
-                  Bed Occupied On {dialog.type === "view" ? "" : asterisk()}
-                </label>
-                <Calendar
-                  value={dialog.data.bedoccupiedon}
-                  onChange={(e) => onChangeHandler("bedoccupiedon", e.value)}
-                  placeholder="Select start date"
-                  dateFormat="dd/mm/yy"
-                  showIcon
-                  className="FormCalender"
-                  disabled={
-                    dialog.type === "view" || dialog.data.status === "Approved"
-                      ? true
-                      : false
-                  }
-                />
-              </div>
-            </div>
-            <div className={styles.modalBodyFlexCmtsFile}>
-              <div className={styles.fieldssm} style={{ width: "36%" }}>
-                <label>Comments</label>
-                <InputTextarea
-                  rows={4}
-                  placeholder="Enter here"
-                  style={{ resize: "none", height: "100px" }}
-                  onChange={(e) => onChangeHandler("comments", e.target.value)}
-                  value={dialog.data.comments}
-                  disabled={
-                    dialog.type === "view" || dialog.data.status === "Approved"
-                      ? true
-                      : false
-                  }
-                />
-              </div>
-              <div className={styles.fieldssm} style={{ width: "62%" }}>
-                <div className={styles.attachementBtn}>
-                  {/* <div style={{ width: "100%", display: "flex" }}> */}
-                  {dialog.type !== "view" &&
-                  dialog.data.status !== "Approved" ? (
-                    <div style={{ width: "20%" }}>
-                      <label htmlFor="file" className={styles.filelabel}>
-                        Choose file
-                      </label>
-                      <input
-                        type="file"
-                        style={{ display: "none" }}
-                        id="file"
-                        onChange={(event) =>
-                          onChangeHandler("files", event.target.files)
-                        }
-                      />
-                    </div>
-                  ) : (
-                    ""
-                  )}
-                  {dialog.data.files.length > 0 && (
-                    <div
-                      style={{
-                        width: "50%",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 5,
-                        height: "100px",
-                        overflow: "auto",
-                      }}
-                    >
-                      {dialog.data.files
-                        .filter((e: any) => e.type !== "Delete") // Only show non-deleted files
-                        .map((e: any, index: number) => (
-                          <div key={index} className={styles.FileCardDesign}>
-                            {e.type === "Inlist" ? (
+              <div className={styles.modalBodyFlexCmtsFile}>
+                <div className={styles.fieldssm} style={{ width: "36%" }}>
+                  <label>Comments</label>
+                  <InputTextarea
+                    rows={4}
+                    placeholder="Enter here"
+                    style={{ resize: "none", height: "100px" }}
+                    onChange={(e) =>
+                      onChangeHandler("comments", e.target.value)
+                    }
+                    value={dialog.data.comments}
+                    disabled={
+                      dialog.type === "view" ||
+                      dialog.data.prevstatus === "Approved" ||
+                      dialog.data.prevstatus === "Occupied"
+                        ? true
+                        : false
+                    }
+                  />
+                </div>
+                <div className={styles.fieldssm} style={{ width: "62%" }}>
+                  <div className={styles.attachementBtn}>
+                    {/* <div style={{ width: "100%", display: "flex" }}> */}
+                    {dialog.type !== "view" &&
+                    dialog.data.prevstatus !== "Approved" &&
+                    dialog.data.prevstatus !== "Occupied" ? (
+                      <div style={{ width: "20%" }}>
+                        <label htmlFor="file" className={styles.filelabel}>
+                          Choose file
+                        </label>
+                        <input
+                          type="file"
+                          style={{ display: "none" }}
+                          id="file"
+                          onChange={(event) =>
+                            onChangeHandler("files", event.target.files)
+                          }
+                        />
+                      </div>
+                    ) : (
+                      ""
+                    )}
+                    {dialog.data.files.length > 0 && (
+                      <div
+                        style={{
+                          width: "50%",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 5,
+                          height: "100px",
+                          overflow: "auto",
+                        }}
+                      >
+                        {dialog.data.files
+                          .filter((e: any) => e.type !== "Delete") // Only show non-deleted files
+                          .map((e: any, index: number) => (
+                            <div key={index} className={styles.FileCardDesign}>
+                              {e.type === "Inlist" ? (
+                                <div
+                                  className={styles.fileName}
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => {
+                                    window.open(
+                                      window.location.origin + e.url + "?web=1"
+                                    );
+                                  }}
+                                >
+                                  {e.name}
+                                </div>
+                              ) : (
+                                <div className={styles.fileName}>{e.name}</div>
+                              )}
                               <div
-                                className={styles.fileName}
-                                style={{ cursor: "pointer" }}
-                                onClick={() => {
-                                  window.open(
-                                    window.location.origin + e.url + "?web=1"
-                                  );
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
                                 }}
                               >
-                                {e.name}
+                                {dialog.type !== "view" ? (
+                                  <i
+                                    className="pi pi-times"
+                                    style={{
+                                      color: "red",
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() => handleDelete(index)}
+                                  ></i>
+                                ) : (
+                                  ""
+                                )}
                               </div>
-                            ) : (
-                              <div className={styles.fileName}>{e.name}</div>
-                            )}
-                            <div
-                              style={{ display: "flex", alignItems: "center" }}
-                            >
-                              {dialog.type !== "view" ? (
-                                <i
-                                  className="pi pi-times"
-                                  style={{
-                                    color: "red",
-                                    cursor: "pointer",
-                                  }}
-                                  onClick={() => handleDelete(index)}
-                                ></i>
-                              ) : (
-                                ""
-                              )}
                             </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
+                          ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            {(dialog.data.nextlevel === 2 || dialog.data.nextlevel === 3) &&
-            props.CurrentRole !== "Supervisor" ? (
-              <div className={styles.fieldssm} style={{ width: "36%" }}>
-                <label>Approver Comments</label>
-                <InputTextarea
-                  rows={4}
-                  placeholder="Enter here"
-                  style={{ resize: "none", height: "100px" }}
-                  onChange={(e) =>
-                    onChangeHandler("approvercomments", e.target.value)
-                  }
-                  value={dialog.data.approvercomments}
+              {(dialog.data.nextlevel === 2 || dialog.data.nextlevel === 3) &&
+              props.CurrentRole !== "Supervisor" ? (
+                <div className={styles.fieldssm} style={{ width: "36%" }}>
+                  <label>Approver Comments</label>
+                  <InputTextarea
+                    rows={4}
+                    placeholder="Enter here"
+                    style={{ resize: "none", height: "100px" }}
+                    onChange={(e) =>
+                      onChangeHandler("approvercomments", e.target.value)
+                    }
+                    value={dialog.data.approvercomments}
+                  />
+                </div>
+              ) : (
+                ""
+              )}
+              {(dialog.data.prevstatus === "Approved" ||
+                dialog.data.prevstatus === "Occupied") &&
+              dialog.type === "edit" ? (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "20px",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div className={styles.fieldssm}>
+                    <label>
+                      Bed Occupied On
+                      {dialog.data.prevstatus === "Occupied" ? "" : asterisk()}
+                    </label>
+                    <Calendar
+                      value={dialog.data.bedoccupiedon}
+                      onChange={(e) =>
+                        onChangeHandler("bedoccupiedon", e.value)
+                      }
+                      placeholder="Select start date"
+                      dateFormat="dd/mm/yy"
+                      showIcon
+                      className="FormCalender"
+                      disabled={
+                        dialog.data.prevstatus === "Occupied" ? true : false
+                      }
+                    />
+                  </div>
+                  <div className={styles.fieldssm}>
+                    <label>
+                      Shelter
+                      {dialog.data.prevstatus === "Occupied" ? "" : asterisk()}
+                    </label>
+                    <Dropdown
+                      value={dialog.data.shelter || ""}
+                      onChange={(e) => onChangeHandler("shelter", e.value)}
+                      options={drpdowns.shelter}
+                      optionLabel="name"
+                      optionValue="code"
+                      placeholder="Select a shelter"
+                      disabled={
+                        dialog.data.prevstatus === "Occupied" ? true : false
+                      }
+                    />
+                  </div>
+                  <div className={styles.fieldssm}>
+                    <label>
+                      Bed
+                      {dialog.data.prevstatus === "Occupied" ? "" : asterisk()}
+                    </label>
+                    <Dropdown
+                      value={dialog.data.bed}
+                      onChange={(e) => onChangeHandler("bed", e.value)}
+                      options={drpdowns.bed}
+                      optionLabel="name"
+                      optionValue="code"
+                      placeholder="Select a bed"
+                      disabled={
+                        dialog.data.prevstatus === "Occupied" ? true : false
+                      }
+                    />
+                  </div>
+                </div>
+              ) : (
+                ""
+              )}
+              {dialog.data.prevstatus === "Occupied" ? (
+                <div className={styles.fieldssm}>
+                  <label>Status {asterisk()}</label>
+                  <Dropdown
+                    value={dialog.data.status}
+                    onChange={(e) => onChangeHandler("status", e.value)}
+                    options={drpdowns.status}
+                    optionLabel="name"
+                    optionValue="code"
+                    placeholder="Select a status"
+                  />
+                </div>
+              ) : (
+                ""
+              )}
+              <div className={styles.modalFooter}>
+                <Button
+                  className={styles.cancelBtn}
+                  label={dialog.type === "view" ? "Close" : "Cancel"}
+                  icon="pi pi-times-circle"
+                  iconPos="left"
+                  onClick={() => setdialog({ ..._dialog })}
                 />
-              </div>
-            ) : (
-              ""
-            )}
-            {dialog.data.status === "Approved" && dialog.type === "edit" ? (
-              <div style={{ display: "flex", gap: "20px" }}>
-                <div className={styles.fieldssm}>
-                  <label>Shelter {asterisk()}</label>
-                  <Dropdown
-                    value={dialog.data.shelter || ""}
-                    onChange={(e) => onChangeHandler("shelter", e.value)}
-                    options={drpdowns.shelter}
-                    optionLabel="name"
-                    optionValue="code"
-                    placeholder="Select a shelter"
+                {dialog.type !== "view" ? (
+                  <Button
+                    className={styles.activeBtn}
+                    label={dialog.type === "add" ? "Save" : "Update"}
+                    icon="pi pi-send"
+                    iconPos="left"
+                    onClick={() => requestValidation("Submit")}
                   />
-                </div>
-                <div className={styles.fieldssm}>
-                  <label>Bed {asterisk()}</label>
-                  <Dropdown
-                    value={dialog.data.bed}
-                    onChange={(e) => onChangeHandler("bed", e.value)}
-                    options={drpdowns.bed}
-                    optionLabel="name"
-                    optionValue="code"
-                    placeholder="Select a bed"
-                  />
-                </div>
+                ) : (dialog.data.nextlevel === 2 ||
+                    dialog.data.nextlevel === 3) &&
+                  props.CurrentRole !== "Supervisor" ? (
+                  <>
+                    <Button
+                      className={styles.rejectBtn}
+                      label="Rejected"
+                      icon="pi pi-send"
+                      iconPos="left"
+                      onClick={() => requestValidation("Rejected")}
+                    />
+                    <Button
+                      className={styles.approveBtn}
+                      label="Approved"
+                      icon="pi pi-send"
+                      iconPos="left"
+                      onClick={() => requestValidation("Approved")}
+                    />
+                  </>
+                ) : null}
               </div>
-            ) : (
-              ""
-            )}
-            <div className={styles.modalFooter}>
-              <Button
-                className={styles.cancelBtn}
-                label={dialog.type === "view" ? "Close" : "Cancel"}
-                icon="pi pi-times-circle"
-                iconPos="left"
-                onClick={() => setdialog({ ..._dialog })}
-              />
-              {dialog.type !== "view" ? (
+            </Dialog>
+          ) : dialog.type === "delete" ? (
+            <Dialog
+              header="Delete Confirmation"
+              visible={dialog.condition}
+              style={{ width: "27%" }}
+              className="delPopup"
+              onHide={(): void => setdialog({ ..._dialog })}
+            >
+              <p style={{ margin: 0, paddingBottom: 14 }}>
+                Are you sure, you want to delete this request ?
+              </p>
+
+              <div className={styles.modalFooter}>
+                <Button
+                  className={styles.cancelBtn}
+                  label="No"
+                  icon="pi pi-times-circle"
+                  iconPos="left"
+                  onClick={() => setdialog({ ..._dialog })}
+                />
                 <Button
                   className={styles.activeBtn}
-                  label={dialog.type === "add" ? "Save" : "Update"}
-                  icon="pi pi-send"
+                  label="Yes"
+                  icon="pi pi-trash"
                   iconPos="left"
-                  onClick={() => requestValidation("Submit")}
+                  onClick={() => {
+                    updateRequest(dialog.data, true);
+                  }}
                 />
-              ) : (dialog.data.nextlevel === 2 ||
-                  dialog.data.nextlevel === 3) &&
-                props.CurrentRole !== "Supervisor" ? (
-                <>
-                  <Button
-                    className={styles.rejectBtn}
-                    label="Rejected"
-                    icon="pi pi-send"
-                    iconPos="left"
-                    onClick={() => requestValidation("Rejected")}
-                  />
-                  <Button
-                    className={styles.approveBtn}
-                    label="Approved"
-                    icon="pi pi-send"
-                    iconPos="left"
-                    onClick={() => requestValidation("Approved")}
-                  />
-                </>
-              ) : null}
-            </div>
-          </Dialog>
-          <Dialog
-            header="Delete Confirmation"
-            visible={dialog.condition && dialog.type == "delete"}
-            style={{ width: "27%" }}
-            className="delPopup"
-            onHide={(): void => undefined}
-          >
-            <p style={{ margin: 0, paddingBottom: 14 }}>
-              Are you sure, you want to delete this request ?
-            </p>
+              </div>
+            </Dialog>
+          ) : dialog.type === "workflow" ? (
+            <Dialog
+              header="Request workflow"
+              visible={dialog.condition}
+              style={{ width: "50%" }}
+              className="workflowPopup requestlog-Design"
+              onHide={(): void => setdialog({ ..._dialog })}
+              draggable={false}
+            >
+              <DataTable
+                emptyMessage="No workflow found"
+                value={dialog.data.requestlog}
+                paginator={false}
+                rows={10}
+                className="workflowconfigView"
+              >
+                <Column
+                  field="role"
+                  header="Role"
+                  // body={role}
+                  style={{ width: "25%" }}
+                ></Column>
+                <Column
+                  field="username"
+                  header="Name"
+                  // body={username}
+                  style={{ width: "25%" }}
+                ></Column>
+                <Column
+                  field="status"
+                  header="Status"
+                  // body={""}
+                  style={{ width: "25%" }}
+                ></Column>
+              </DataTable>
 
-            <div className={styles.modalFooter}>
-              <Button
-                className={styles.cancelBtn}
-                label="No"
-                icon="pi pi-times-circle"
-                iconPos="left"
-                onClick={() => setdialog({ ..._dialog })}
-              />
-              <Button
-                className={styles.activeBtn}
-                label="Yes"
-                icon="pi pi-trash"
-                iconPos="left"
-                onClick={() => {
-                  updateRequest(dialog.data, true);
-                }}
-              />
-            </div>
-          </Dialog>
+              <div className={styles.modalFooter}>
+                <Button
+                  className={styles.cancelBtn}
+                  label="Close"
+                  icon="pi pi-times-circle"
+                  iconPos="left"
+                  onClick={() => setdialog({ ..._dialog })}
+                />
+              </div>
+            </Dialog>
+          ) : null}
         </div>
-      }
+      )}
     </>
   );
 };

@@ -6,6 +6,7 @@ import { Toast } from "primereact/toast";
 import { useState, useRef, useEffect } from "react";
 import { sp } from "@pnp/sp/presets/all";
 import ConfigurationScreen from "./Configurations/ConfigurationScreen";
+import Loader from "./Loader/Loader";
 
 interface Iuser {
   Id: number | null;
@@ -15,7 +16,7 @@ interface Iuser {
 
 const MainComponent: any = (props: any) => {
   const [CurrentRole, setCurrentRole] = useState<string>("");
-  const [loader, setLoader] = useState<boolean>(true);
+  const [loader, setLoader] = useState<boolean>(false);
   const [users, setUsers] = useState<Iuser[]>([]);
   const toast: any = useRef(null);
   const CurrentUser = props?.context?._pageContext?._user?.email;
@@ -27,7 +28,7 @@ const MainComponent: any = (props: any) => {
   };
 
   //get Userconfig data
-  const getUserConfig = () => {
+  const getUserConfig = (userList: any) => {
     sp.web.lists
       .getByTitle("UserConfig")
       .items.select("*", "Users/Id", "Users/EMail")
@@ -37,8 +38,9 @@ const MainComponent: any = (props: any) => {
       .get()
       .then(async (items) => {
         setCurrentRole(items[0].Role);
-        setLoader(false);
+        setUsers([...userList]);
         setconfigpage(false);
+        setLoader(false);
       })
       .catch((err) => {
         console.error("Error get all userconfig:", err);
@@ -54,8 +56,7 @@ const MainComponent: any = (props: any) => {
           Title: user.Title,
           Email: user.Email,
         }));
-        setUsers([...userList]);
-        getUserConfig();
+        getUserConfig([...userList]);
       })
       .catch((err) => {
         errFunction("Error getUser:", err);
@@ -76,23 +77,28 @@ const MainComponent: any = (props: any) => {
     });
   };
   useEffect(() => {
+    setLoader(true);
     getUser(); // Call the async function inside useEffect
   }, []);
-  return !loader && !configpage ? (
-    <div>
-      <Dashboard
-        toastFunc={toastFunc}
-        allUser={users}
-        CurrentUser={CurrentUser}
-        CurrentRole={CurrentRole}
-        setconfigpage={setconfigpage}
-      />
-      <Toast ref={toast} />
-    </div>
+  return loader ? (
+    <Loader />
+  ) : !configpage ? (
+    <>
+      <div>
+        <Dashboard
+          toastFunc={toastFunc}
+          allUser={users}
+          CurrentUser={CurrentUser}
+          CurrentRole={CurrentRole}
+          setconfigpage={setconfigpage}
+        />
+        <Toast ref={toast} />
+      </div>
+    </>
   ) : (
     <div>
       <ConfigurationScreen setconfigpage={setconfigpage} />
-    </div> // or null, or a loading spinner
+    </div>
   );
 };
 

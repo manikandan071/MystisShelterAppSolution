@@ -165,17 +165,21 @@ table tbody tr:last-child td:last-child {
   border: none;
 }
 
-/* .p-disabled {
+.p-disabled {
   color: #000 !important;
   border: none !important;
   padding: 0px !important;
-} */
+}
 .p-calendar-disabled {
   color: #000 !important;
   border: none !important;
   padding: 0px !important;
 }
-
+.p-dropdown-disabled {
+  color: #000 !important;
+  border: none !important;
+  padding: 0px !important;
+}
 .p-paginator-pages {
   display: flex;
   gap: 8px;
