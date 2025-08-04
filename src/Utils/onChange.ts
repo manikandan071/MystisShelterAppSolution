@@ -43,7 +43,7 @@ export const rowOnChangeFunction = (
         ...updatedState[index][fieldName],
         value,
         isValid: !isDuplicate,
-        errorMessage: isDuplicate ? `Duplicate data found - ${value}` : "",
+        errorMessage: isDuplicate ? `${value} already exists` : "",
       },
     };
 

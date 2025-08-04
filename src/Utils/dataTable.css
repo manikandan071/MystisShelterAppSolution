@@ -55,10 +55,11 @@
 
 .status-badge {
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: 3px;
   font-size: 12px;
   font-weight: 500;
-  display: inline-block;
+  display: flex;
+  gap: 10px;
 }
 .in-progress, .pending{
   background-color: #ffff0069;
@@ -66,14 +67,14 @@
   border: 1px solid #ead595;
 }
 .occupied {
-  background-color: #b08a1d;
-  color: #f9f2f2;
+  background-color: #f1dede;
+  color: #4c4633;
   border: 1px solid #b08a1d;
 }
 .not-started, .available{
-  background-color: #6da3ef;
-  color: #f9f2f2;
-  border: 1px solid #6da3ef;
+  background-color: #f8fff8;
+  color: #1a8812;
+  border: 1px solid #aed9aa;
 }
 .overdue, .missed {
   background-color: #ff9393;

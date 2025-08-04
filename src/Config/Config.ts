@@ -1,5 +1,6 @@
 const SPLists = {
   BedConfigList: "BedConfig",
+  UserConfigList: "UserConfig",
   BedLogList: "BedLog",
   ShelterConfigList: "ShelterConfig",
   RequestList: "Request",

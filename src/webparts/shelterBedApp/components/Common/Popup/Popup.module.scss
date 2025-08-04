@@ -8,8 +8,12 @@
   align-items: center;
   justify-content: end;
 }
+.flexSpaceBetween {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+}
 .contentWrapper {
-  padding: 0px 10px;
   width: 100%;
 }
 
@@ -22,10 +26,6 @@
 .AlertPopupHeader,
 .popupHeaderWithoutCloseIcon {
   width: 100%;
-  // padding: 28px 36px;
-  // padding-bottom: 25px;
-  // font-family: "interSemiBold", sans-serif;
-  // font-size: 20px;
   .header {
     color: #1e2023;
     font-weight: 600;
@@ -49,17 +49,12 @@
     }
   }
 }
-.popupHeaderWithoutCloseIcon {
-  padding: 10px;
-}
 .popupFooter,
 .popupFooterConfirmation,
 .AlertPopupFooter {
-  @extend .flexEnd;
+  @extend .flexSpaceBetween;
   width: 100%;
-  // margin: 15px 0px 10px 0px;
   gap: 20px;
-  // margin-top: 15px;
 }
 .popupFooterConfirmation {
   margin: 10px 0;
@@ -72,7 +67,6 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
-  // max-height: 78vh;
 }
 .promoteContentContainer {
   display: flex;
@@ -81,7 +75,6 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
-  max-height: 60vh;
 }
 
 // alertpopup styles

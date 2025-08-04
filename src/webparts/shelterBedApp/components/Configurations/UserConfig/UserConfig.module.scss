@@ -1,0 +1,53 @@
+.user_Container{
+    width: 100%;
+    padding: 20px;
+    border-radius: 5px;
+    border: 1px solid #f1dfdf;
+}
+.tab_container {
+    gap: 15px;
+    width: 65%;
+    display: flex;
+    button{
+       flex: 1;
+       align-items: center;
+       font-family: Internormal,sans-serif !important;
+       font-size: 13px;
+       letter-spacing: .4px;
+    }
+}
+
+.tabBtn {
+    background-color: transparent;
+    // color: #00000099;
+    color: #a78110;
+    font-size: 14px;
+    // font-weight: 600;
+    padding: 7px 28px;
+    border: none;
+    border: 1px solid #f1dfdf;
+    cursor: pointer;
+}
+
+.activeTabBtn {
+    background-color: #ffbf001a;
+    color: #a78110;
+    font-size: 14px;
+    // font-weight: 600;
+    padding: 7px 28px;
+    border: none;
+    border: 1px solid #ffbf00;
+    cursor: pointer;
+}
+.dashboardHeader {
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    margin: 15px 0px;
+
+    .heading {
+        color: #414141;
+        font-size: 18px;
+        font-weight: 600;
+    }
+}

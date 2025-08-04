@@ -1,32 +1,37 @@
-/* .custom-data-table .p-datatable-wrapper{
+.custom-data-table .p-datatable-wrapper{
     min-height: 60vh !important;
-} */
-.min_height_68vh .p-datatable-wrapper {
+}
+.min_height_77vh .p-datatable-wrapper {
+  min-height: 77vh !important;
+  /* padding: 15px 0px; */
+  /* background: white; */
+  border-radius: 5px;
+}
+.min_height_69vh .p-datatable-wrapper {
   min-height: 68vh !important;
-  padding: 15px;
-  background: white;
+  /* padding: 15px 0px; */
+  /* background: white; */
   border-radius: 5px;
 }
-.min_height_48vh .p-datatable-wrapper {
-  min-height: 57vh !important;
-  padding: 15px;
-  background: white;
-  border-radius: 5px;
-}
-.min_height_62vh .p-datatable-wrapper {
-  min-height: 65vh !important;
-  padding: 15px;
+.min_height_55vh .p-datatable-wrapper {
+  min-height: 55vh !important;
+  /* padding: 15px; */
   background: white;
   border-radius: 5px;
 }
 .custom-data-table .p-datatable thead > tr > th {
   color: var(--data-table-header-font-color) !important;
-  /* background-color: var(--data-table-header-bg-color) !important; */
+  background-color: var(--data-table-header-bg-color) !important;
   border: none !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
+  border-radius: 0px;
+  padding: 10px 16px;
+  font-family: Internormal, sans-serif !important;
+  font-weight: 500;
+  letter-spacing: .4px;
 }
 .custom-data-table .p-datatable-tbody tr:hover {
-  background-color: #eee9ea74;
+  background-color: #e7ecf138;
 }
 .custom-data-table .p-datatable-tbody tr td {
   padding: 12px 15px;
@@ -42,13 +47,13 @@
 }
 
 .custom-data-table .p-datatable thead > tr > th:first-child {
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
 }
 
 .custom-data-table .p-datatable thead > tr > th:last-child {
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
 }
 
 .custom-data-table .p-datatable tbody > tr:first-child > td {
@@ -85,13 +90,17 @@
 .custom-data-table .p-paginator-bottom .p-link:hover {
   background-color: var(--data-table-paginator-hover-bg-color);
 }
+.custom-data-table .p-paginator-bottom .p-link {
+  min-width: 32px !important;
+    height: 30px !important;
+}
 .custom-data-table .p-paginator .p-paginator-pages .p-highlight {
   color: var(--data-table-paginator-active-font-color);
   background-color: var(--data-table-paginator-active-bg-color);
   border-color: var(--data-table-paginator-active-bg-color);
 }
 .custom-data-table .p-paginator button {
-  border-radius: 50%;
+  border-radius: 30%;
 }
 .custom-data-table .p-paginator-bottom .p-paginator-first,
 .custom-data-table .p-paginator-bottom .p-paginator-prev,
@@ -101,12 +110,12 @@
   border: none;
 }
 .custom-data-table .p-paginator-bottom .p-disabled {
-  color: var(--data-table-paginator-disabled-button-color);
+  color: var(--data-table-paginator-disabled-button-color) !important;
   border: none;
 }
-.p-datatable-emptymessage {
+/* .p-datatable-emptymessage {
   background: transparent !important;
-}
+} */
 .p-datatable-emptymessage td {
   font-size: 14px;
   color: var(--basic-font-color);

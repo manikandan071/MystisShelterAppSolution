@@ -2,56 +2,82 @@ $primaryColor: #b99223;
 
 .maincontainer {
   background: #f9fafb;
-  padding: 15px;
+  padding: 15px 15px 0px 15px;
+  .bannerSection{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .logoSection{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      img {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+      }
+      .heading {
+        color: #414141;
+        font-size: 20px;
+        font-weight: 600; 
+      }
+    }
+  }
   .headingSection {
     display: flex;
     justify-content: space-between;
     align-items: center;
-
+    margin-bottom: 15px;
     .heading {
       color: #414141;
       font-size: 18px;
       font-weight: 600;
     }
-    button {
+    .addBtn {
       background-color: $primaryColor;
       border: none;
       font-size: 0.8rem;
     }
-  }
-  .dataTable {
-    margin: 10px 0;
-    background-color: white;
-    padding: 15px;
-    border-radius: 10px;
-    .columnBox {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      gap: 6px;
-
-      img {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        object-fit: fill;
-      }
-    }
-
-    .columnValue {
-      margin: 0;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-      width: 90%;
+    .configBtn {
+      background-color: #2d2a3f;
+      border: none;
+      font-size: 0.8rem;
     }
   }
+  // .dataTable {
+  //   margin: 10px 0;
+  //   background-color: white;
+  //   padding: 15px;
+  //   border-radius: 10px;
+  //   .columnBox {
+  //     display: flex;
+  //     justify-content: flex-start;
+  //     align-items: center;
+  //     gap: 6px;
+
+  //     img {
+  //       width: 30px;
+  //       height: 30px;
+  //       border-radius: 50%;
+  //       object-fit: fill;
+  //     }
+  //   }
+
+  //   .columnValue {
+  //     margin: 0;
+  //     text-overflow: ellipsis;
+  //     white-space: nowrap;
+  //     overflow: hidden;
+  //     width: 90%;
+  //   }
+  // }
 }
 .modalBodyFlex {
   display: flex;
   // flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  // justify-content: space-between;
+  gap: 30px;
 
   .fields {
     display: flex;
@@ -67,44 +93,46 @@ $primaryColor: #b99223;
 }
 .modalFooter {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: end;
   gap: 10px;
-
+  padding-top: 10px;
   .activeBtn {
     background-color: $primaryColor;
     border: none !important;
-    font-size: 0.8rem;
+    // font-size: 0.8rem;
     border-radius: 4px !important;
   }
 
   .cancelBtn {
-    background-color: #525252c9;
+    background-color: transparent;
     border: none !important;
-    font-size: 0.8rem;
+    // font-size: 0.8rem;
     border-radius: 4px !important;
+    color: #000;
   }
   .approveBtn {
-    background-color: rgb(14, 176, 14);
+    background-color: #0eb00e;
     border: none !important;
-    font-size: 0.8rem;
+    // font-size: 0.8rem;
     border-radius: 4px !important;
   }
 
   .rejectBtn {
     background-color: #de1616c9;
     border: none !important;
-    font-size: 0.8rem;
+    // font-size: 0.8rem;
     border-radius: 4px !important;
   }
 }
 .fieldssm {
-  width: 25%;
+  width: 33%;
   display: flex;
   flex-direction: column;
   margin-bottom: 10px;
-  label {
-    font-size: 0.9rem;
-  }
+  // label {
+  //   font-size: 0.9rem;
+  // }
 }
 
 .attachementBtn {
@@ -117,31 +145,40 @@ $primaryColor: #b99223;
   align-items: center;
 }
 .filelabel {
+  cursor: pointer;
   background: $primaryColor;
-  padding: 10px;
+  padding: 5px 10px;
   border-radius: 5px;
   color: white;
+  font-size: 13px;
+  font-family: Internormal, sans-serif !important;
 }
 .FileCardDesign {
   width: 100%;
   display: flex;
   justify-content: space-between;
-  background-color: $primaryColor;
-  color: #fff;
-  padding: 6px;
+  background-color: #b08a1d33;
+  color: #31314e;
+  padding: 6px 10px 7px 10px;
   border-radius: 5px;
   gap: 20px;
 }
 .fileName {
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  max-width: 350px;
+  .fileText{
+    font-size: 13px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
 }
 
 .modalBodyFlexCmtsFile {
   display: flex;
-  //   align-items: center;
   justify-content: start;
 }
 
@@ -152,8 +189,9 @@ $primaryColor: #b99223;
   gap: 8px;
   padding: 4px;
   text-align: center;
-  border-radius: 20px;
-  width: 80%;
+  border-radius: 3px;
+  width: 100%;
+  font-size: 13px;
   font-weight: 600;
   height: 25px;
 }

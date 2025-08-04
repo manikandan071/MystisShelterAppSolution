@@ -56,9 +56,7 @@ const CustomInputBox: React.FC<dropDownProps> = ({
   }, [onFoucs]);
   return (
     <div className={`inputSectionWrapper ${sectionType} inputBox`}>
-      {labelText !== "" && (
-        <label style={{ width: "100%", fontSize: "13px" }}>{labelText}</label>
-      )}
+      {labelText !== "" && <label className="input-label">{labelText}</label>}
       <InputText
         ref={inputRef}
         type={inputType}

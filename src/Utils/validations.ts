@@ -115,7 +115,12 @@ export const rowValidateFunction = (
       updatedRow[key] = {
         ...row[key],
         isValid,
-        errorMessage: "Please fill required fields",
+        errorMessage:
+          key === "BedName"
+            ? "Please enter bed name"
+            : key === "ShelterName"
+            ? "Please enter Shelter name"
+            : "Please fill required fields",
       };
     });
     return updatedRow;

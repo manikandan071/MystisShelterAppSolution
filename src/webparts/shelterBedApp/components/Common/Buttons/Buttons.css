@@ -1,8 +1,11 @@
 .defaultBtn {
-  padding: 5px 18px 7px 18px;
+  padding: 8px 18px;
   border-radius: 4px;
   border: none;
-  font-size: 0.8rem;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  font-weight: 500;
+  font-family: Internormal, sans-serif !important;
 }
 .defaultBtn:focus {
   box-shadow: none;
@@ -12,20 +15,19 @@
 }
 .primaryBtn {
   background-color: #b08a1d;
-  border: 1px solid #b08a1d;
   color: #fff;
-  padding: 7px 12px !important;
 }
-.secondaryBtn {
-  background-color: #6f6a8a;
-  border: 1px solid #6f6a8a;
+.approvebtn {
+  background-color: #0eb00e;
+  color: #fff;
 }
-.submitBtn {
-  background-color: #593abb;
-  border: 1px solid #593abb;
+.rejectBtn {
+  background-color: #de1616c9;
   color: #fff;
 }
 .cancelBtn {
-  background-color: #6f6a8a;
-  border: 1px solid #6f6a8a;
+  background-color: transparent;
+  color: #000;
+  border: none !important;
+  padding: 0px;
 }

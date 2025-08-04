@@ -59,7 +59,7 @@ const CustomSearchInput: React.FC<dropDownProps> = ({
             height: "32px",
             borderRadius: "4px",
             paddingLeft: "2.5rem",
-            borderColor: "#b99223",
+            borderColor: "var(--input-fields-border-color)",
             width: `${width}`,
           }}
           value={value}

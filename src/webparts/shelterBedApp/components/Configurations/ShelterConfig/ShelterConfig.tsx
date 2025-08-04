@@ -17,7 +17,7 @@ import {
   submitSheltersDetails,
   updateSheltersDetails,
 } from "../../../../../Services/ConfigurationServices";
-import { GenerateCustomId, OnTextRender } from "../../../../../Utils/dataTable";
+import { OnTextRender } from "../../../../../Utils/dataTable";
 import { togglePopupVisibility } from "../../../../../Utils/togglePopup";
 import Popup from "../../Common/Popup/Popup";
 import CustomInputBox from "../../Common/CustomInputs/CustomInputBox";
@@ -34,10 +34,10 @@ import {
 } from "../../../../../Utils/validations";
 import { tempShelterFormDetails } from "../../../../../Config/initialStates";
 import CustomSearchInput from "../../Common/CustomInputs/CustomSearchInput";
-const taskIcon = require("../../../assets/images/edit.png");
-const deleteIcon = require("../../../assets/images/trash_active.png");
-const defaultImg = require("../../../assets/images/trash.png");
-const hoverImg = require("../../../assets/images/trash_active.png");
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import CustomToast from "../../Common/Toast/Toast";
+import Tooltip from "@mui/material/Tooltip";
 interface shelterProps {
   Id: number;
   ShelterName: string;
@@ -50,7 +50,7 @@ const ShelterConfig: React.FC = () => {
     {
       open: false,
       popupTitle: "",
-      popupWidth: "80%",
+      popupWidth: "65%",
       popupType: "custom",
       defaultCloseBtn: false,
       popupData: "",
@@ -73,7 +73,6 @@ const ShelterConfig: React.FC = () => {
     Type: "new",
     isLoading: false,
   });
-  const [rowIndex, setRowIndex] = useState<number | null>(null);
   const [popupController, setPopupController] = useState(
     initialPopupController
   );
@@ -99,6 +98,13 @@ const ShelterConfig: React.FC = () => {
   const [deletedBedsList, setDeletedBedsList] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState<any>({
     SearchValue: "",
+  });
+
+  const [toastResponse, setToastResponse] = useState<any>({
+    severity: "",
+    summary: "",
+    detail: "",
+    life: 3000,
   });
 
   const onChange = (value: any, isBreakeCondition?: boolean) => {
@@ -194,21 +200,23 @@ const ShelterConfig: React.FC = () => {
             style={{
               display: "flex",
               width: "100%",
-              gap: "30px",
+              gap: "33px",
               margin: "10px 0px",
+              padding: "0px 10px",
               fontSize: "13px",
               fontWeight: "600",
             }}
           >
-            <label style={{ width: "40%" }}>
-              Shelter Name <strong style={{ color: "red" }}>*</strong>
+            <label style={{ width: "40%" }} className="input-label">
+              Shelter Name
+              <span style={{ color: "red", marginLeft: "2px" }}>*</span>
             </label>
-            <label>Description</label>
+            <label className="input-label">Description</label>
           </div>
           <div
             style={{
               minHeight: "50px",
-              maxHeight: "282px",
+              maxHeight: "298px",
               overflow: "auto",
               width: "100%",
               display: "flex",
@@ -249,12 +257,12 @@ const ShelterConfig: React.FC = () => {
                             const updatedState = [...prevState];
                             updatedState[index] = {
                               ...updatedState[index],
-                              ["ShelterName"]: {
-                                ...updatedState[index]["ShelterName"],
+                              ShelterName: {
+                                ...updatedState[index].ShelterName,
                                 value,
                                 isValid: !isDuplicate,
                                 errorMessage: isDuplicate
-                                  ? `Shelter ${value} already exists.`
+                                  ? `${value} already exists.`
                                   : "",
                               },
                             };
@@ -312,18 +320,21 @@ const ShelterConfig: React.FC = () => {
                   />
                   <div style={{ alignSelf: "center" }}>
                     {newSheltersList.length > 1 && (
-                      <img
-                        src={rowIndex === index ? hoverImg : defaultImg}
-                        alt="interactive"
-                        width={18}
-                        height={18}
-                        style={{ cursor: "pointer" }}
-                        title="Delete"
+                      <DeleteIcon
                         onClick={() =>
                           removeRow(shelter?.ShelterName?.Id, index)
                         }
-                        onMouseEnter={() => setRowIndex(index)}
-                        onMouseLeave={() => setRowIndex(null)}
+                        sx={{
+                          cursor: "pointer",
+                          backgroundColor: "#ffebee",
+                          padding: "4px",
+                          borderRadius: "6px",
+                          fontSize: "24px",
+                          color: "#f44336",
+                          "&:hover": {
+                            backgroundColor: "#ffcdd2",
+                          },
+                        }}
                       />
                     )}
                   </div>
@@ -338,13 +349,13 @@ const ShelterConfig: React.FC = () => {
     [
       <div key={2}>
         <p style={{ fontSize: "15px", fontWeight: "500", margin: "0px" }}>
-          Are sure want to delete{" "}
-          {
+          Are you sure want to delete the shelter?
+          {/* {
             sheltersList?.filter(
               (bed: any) => bed?.Id === isUpdateDetails?.Id
             )[0]?.ShelterName
           }{" "}
-          Shelter?
+          Shelter? */}
         </p>
       </div>,
     ],
@@ -361,6 +372,7 @@ const ShelterConfig: React.FC = () => {
         setSheltersList,
         setIsUpdateDetails,
         handleClosePopup,
+        setToastResponse,
         0
       );
     } else if (isFormValid) {
@@ -369,6 +381,7 @@ const ShelterConfig: React.FC = () => {
         setMasterSheltersList,
         setSheltersList,
         handleClosePopup,
+        setToastResponse,
         0
       );
     }
@@ -380,6 +393,7 @@ const ShelterConfig: React.FC = () => {
         text: "Cancel",
         btnType: "cancelBtn",
         disabled: false,
+        startIcon: "pi pi-times-circle",
         onClick: () => {
           handleClosePopup(0);
           setNewSheltersList([
@@ -403,8 +417,10 @@ const ShelterConfig: React.FC = () => {
       {
         text: "Submit",
         btnType: "primaryBtn",
+        startIcon: "pi pi-check-circle",
         disabled: getFirstInvalidErrorMsg(newSheltersList) ? true : false,
         onClick: () => {
+          rowValidateFunction(newSheltersList, setNewSheltersList, onChange);
           handleSubmitFuction();
         },
       },
@@ -414,6 +430,7 @@ const ShelterConfig: React.FC = () => {
         text: "No",
         btnType: "cancelBtn",
         disabled: false,
+        startIcon: "pi pi-times-circle",
         onClick: () => {
           handleClosePopup(1);
           setIsUpdateDetails({
@@ -427,12 +444,14 @@ const ShelterConfig: React.FC = () => {
         text: "Yes",
         btnType: "primaryBtn",
         disabled: false,
+        startIcon: "pi pi-check-circle",
         onClick: () => {
           if (isUpdateDetails?.Type === "delete") {
             deleteShelterDetails(
               isUpdateDetails?.Id,
               setSheltersList,
               handleClosePopup,
+              setToastResponse,
               1
             );
           }
@@ -499,42 +518,55 @@ const ShelterConfig: React.FC = () => {
   const actionBoadyTemplate = (rowData: any) => {
     return (
       <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-        <img
-          alt="edit-icon"
-          src={taskIcon}
-          width={20}
-          height={20}
-          style={{ cursor: "pointer" }}
-          title="Edit Shelter"
-          onClick={() => {
-            setIsUpdateDetails({
-              Id: rowData?.Id,
-              Type: "update",
-              isLoading: false,
-            });
-          }}
-        />
-        <img
-          alt="delete-icon"
-          src={deleteIcon}
-          width={17}
-          height={17}
-          style={{ cursor: "pointer" }}
-          title="Delete Shelter"
-          onClick={() => {
-            setIsUpdateDetails({
-              Id: rowData?.Id,
-              Type: "delete",
-              isLoading: false,
-            });
-            togglePopupVisibility(
-              setPopupController,
-              1,
-              "open",
-              `Confirmation`
-            );
-          }}
-        />
+        <Tooltip title="Edit">
+          <EditIcon
+            onClick={() => {
+              setIsUpdateDetails({
+                Id: rowData?.Id,
+                Type: "update",
+                isLoading: false,
+              });
+            }}
+            sx={{
+              cursor: "pointer",
+              backgroundColor: "#e3f2fd",
+              padding: "4px",
+              borderRadius: "6px",
+              fontSize: "24px",
+              "&:hover": {
+                backgroundColor: "#bbdefb",
+              },
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="Delete">
+          <DeleteIcon
+            onClick={() => {
+              setIsUpdateDetails({
+                Id: rowData?.Id,
+                Type: "delete",
+                isLoading: false,
+              });
+              togglePopupVisibility(
+                setPopupController,
+                1,
+                "open",
+                `Confirmation`
+              );
+            }}
+            sx={{
+              cursor: "pointer",
+              backgroundColor: "#ffebee",
+              padding: "4px",
+              borderRadius: "6px",
+              fontSize: "24px",
+              color: "#f44336",
+              "&:hover": {
+                backgroundColor: "#ffcdd2",
+              },
+            }}
+          />
+        </Tooltip>
       </div>
     );
   };
@@ -553,15 +585,20 @@ const ShelterConfig: React.FC = () => {
   };
 
   return (
-    <div style={{ width: "100%", padding: "15px" }}>
+    <div style={{ width: "100%" }}>
+      <CustomToast
+        toastResponse={toastResponse}
+        setToastResponse={setToastResponse}
+      />
       <div className={styles.dashboardHeader}>
         {/* <span className={styles.title}>Shelter Details</span> */}
         <div className={styles.heading}>
           Shelter Details
-          <hr style={{ borderColor: "#b99223" }}></hr>
+          {/* <hr style={{ borderColor: "#b99223" }}></hr> */}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <CustomSearchInput
+            width="330px"
             value={searchQuery?.SearchValue}
             placeholder="Search"
             disabled={isLoader}
@@ -571,22 +608,22 @@ const ShelterConfig: React.FC = () => {
           />
           <CustomButton
             btnType="primaryBtn"
-            icon="pi pi-plus-circle"
+            // icon="pi pi-plus-circle"
             onClick={openAddFormPopup}
-            text="Add Shelter"
+            text="Add Shelters"
           />
         </div>
       </div>
       <div className="custom-data-table">
         <DataTable
           value={sheltersList}
-          className="min_height_68vh"
+          className="min_height_69vh"
           scrollable
           scrollHeight="60vh"
           style={{ minWidth: "100%" }}
           key={0}
           paginator={sheltersList?.length > 0}
-          rows={10}
+          rows={9}
           paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
           currentPageReportTemplate={`Showing {first} to {last} of {totalRecords} ${
             sheltersList?.length === 1 ? "record" : "records"
@@ -613,17 +650,17 @@ const ShelterConfig: React.FC = () => {
             );
           }}
         >
-          <Column
+          {/* <Column
             field="Id"
             header="Shelter ID"
             style={{ width: "20%" }}
             body={(rowData) => <GenerateCustomId id={rowData?.Id} prefix="S" />}
             sortable={true}
-          />
+          /> */}
           <Column
             field="ShelterName"
             header="Shelter Name"
-            style={{ width: "30%" }}
+            style={{ width: "40%" }}
             body={(rowData) => (
               <OnTextRender text={rowData?.ShelterName} isBold={true} />
             )}
@@ -634,13 +671,16 @@ const ShelterConfig: React.FC = () => {
             header="Descriptions"
             style={{ width: "40%" }}
             body={(rowData) => (
-              <OnTextRender text={rowData?.Descriptions} isBold={true} />
+              <OnTextRender
+                text={rowData?.Descriptions ? rowData?.Descriptions : "-"}
+                isBold={true}
+              />
             )}
           />
           <Column
             field="Id"
             header="Action"
-            style={{ width: "10%" }}
+            style={{ width: "20%" }}
             body={actionBoadyTemplate}
           />
         </DataTable>

@@ -231,15 +231,13 @@ export const updateBedsDetails = async (
   setTempBedsList: any,
   setIsUpdateDetails: any,
   handleClosePopup: any,
+  setToastResponse: any,
   index: number
 ) => {
   try {
-    // const newBedsArray: any[] = [];
-
     const shelterId = formDetails?.ShelterName?.value?.Id;
     const shelterName = formDetails?.ShelterName?.value?.name;
 
-    // ✅ Process Create & Update together
     const bedPromises = formDetails?.Beds?.value?.map(
       async (bedDetails: any) => {
         const spPayload = {
@@ -249,7 +247,6 @@ export const updateBedsDetails = async (
         };
 
         if (bedDetails?.BedName?.Id) {
-          // ✅ Update existing bed
           const updated = await SpServices.SPUpdateItem({
             Listname: SPLists.BedConfigList,
             ID: bedDetails?.BedName?.Id,
@@ -268,7 +265,6 @@ export const updateBedsDetails = async (
             },
           };
         } else {
-          // ✅ Create new bed
           const res = await SpServices.SPAddItem({
             Listname: SPLists.BedConfigList,
             RequestJSON: spPayload,
@@ -292,7 +288,6 @@ export const updateBedsDetails = async (
       }
     );
 
-    // ✅ Process deletions
     const deletePromises = deletedBedsList.map(async (bedId) => {
       await SpServices.SPUpdateItem({
         Listname: SPLists.BedConfigList,
@@ -303,10 +298,8 @@ export const updateBedsDetails = async (
       return { type: "delete", id: bedId };
     });
 
-    // ✅ Await all SharePoint calls
     const allResponses = await Promise.all([...bedPromises, ...deletePromises]);
 
-    // ✅ Prepare new temp list
     setTempBedsList((prev: any) => {
       let updatedList = [...prev];
 
@@ -356,6 +349,12 @@ export const updateBedsDetails = async (
 
     handleClosePopup(index); // ✅ Close after all updates
     setIsUpdateDetails({ Id: null, Type: "", isLoading: false });
+    setToastResponse({
+      severity: "success",
+      summary: "Sccuess",
+      detail: "Bed configured successfully!",
+      life: 3000,
+    });
   } catch (err) {
     console.error("Error in updateBedsDetails:", err);
   }
@@ -365,6 +364,7 @@ export const deleteBedDetails = async (
   bedId: number,
   setBedsList: any,
   handleClosePopup: any,
+  setToastResponse: any,
   index: number
 ) => {
   try {
@@ -379,6 +379,12 @@ export const deleteBedDetails = async (
       return updatedList;
     });
     handleClosePopup(index);
+    setToastResponse({
+      severity: "success",
+      summary: "Sccuess",
+      detail: "Bed deleted successfully!",
+      life: 3000,
+    });
   } catch (err) {
     console.log("Error : ", err);
   }
@@ -389,6 +395,7 @@ export const submitSheltersDetails = async (
   setMasterState: any,
   setTempState: any,
   handleClosePopup: any,
+  setToastResponse: any,
   index: number
 ) => {
   try {
@@ -425,7 +432,13 @@ export const submitSheltersDetails = async (
     setTempState((prev: any) =>
       [...tempArray, ...prev].sort((a, b) => b.Id - a.Id)
     );
-    handleClosePopup(index); // ✅ now runs AFTER SharePoint updates
+    handleClosePopup(index);
+    setToastResponse({
+      severity: "success",
+      summary: "Sccuess",
+      detail: "Shelter configured successfully!",
+      life: 3000,
+    });
   } catch (err) {
     console.error("Error:", err);
   }
@@ -437,6 +450,7 @@ export const updateSheltersDetails = async (
   setSheltersList: any,
   setIsUpdateDetails: any,
   handleClosePopup: any,
+  setToastResponse: any,
   index: number
 ) => {
   try {
@@ -454,7 +468,6 @@ export const updateSheltersDetails = async (
         };
 
         if (bedDetails?.ShelterName?.Id) {
-          // ✅ Update existing bed
           const updated = await SpServices.SPUpdateItem({
             Listname: SPLists.ShelterConfigList,
             ID: bedDetails?.ShelterName?.Id,
@@ -555,6 +568,12 @@ export const updateSheltersDetails = async (
     setIsUpdateDetails((prev: any) => {
       return { ...prev, Id: null, Type: "", isLoading: false };
     });
+    setToastResponse({
+      severity: "success",
+      summary: "Sccuess",
+      detail: "Shelter configured successfully!",
+      life: 3000,
+    });
   } catch (err) {
     console.error("Error in updateBedsDetails:", err);
   }
@@ -563,6 +582,7 @@ export const deleteShelterDetails = async (
   shelterId: number,
   setSheltersList: any,
   handleClosePopup: any,
+  setToastResponse: any,
   index: number
 ) => {
   try {
@@ -577,6 +597,158 @@ export const deleteShelterDetails = async (
       return updatedList;
     });
     handleClosePopup(index);
+    setToastResponse({
+      severity: "success",
+      summary: "Sccuess",
+      detail: "Shelter deleted successfully!",
+      life: 3000,
+    });
+  } catch (err) {
+    console.log("Error : ", err);
+  }
+};
+
+export const fetchUserGroupsAndUsers = async (
+  setSupervisorList: any,
+  setBillingteamList: any,
+  setApproverList: any,
+  setMasterList: any,
+  setIsLoading: any
+) => {
+  try {
+    const groupsResponse = await SpServices.SPReadItems({
+      Listname: SPLists.UserConfigList,
+      Select: "ID,Role,Users/Id,Users/Title,Users/EMail",
+      Expand: "Users",
+    });
+
+    // const supervisorList: any[] = [];
+    // const billingTeamList: any[] = [];
+    // const approversList: any[] = [];
+    const masterList = {
+      supervisorList: [],
+      billingTeamList: [],
+      approverList: [],
+    };
+
+    groupsResponse?.forEach((group) => {
+      const formattedUsers = (group?.Users || []).map(
+        (user: any, index: number) => ({
+          sNo: index + 1,
+          userId: user?.Id,
+          userName: user?.Title,
+          userEmail: user?.EMail,
+        })
+      );
+
+      const groupData = {
+        groupId: group?.ID,
+        role: group?.Role,
+        users: formattedUsers,
+      };
+
+      switch (group?.Role) {
+        case "Supervisor":
+          setSupervisorList(groupData);
+          masterList.supervisorList = formattedUsers;
+          break;
+        case "Billing Team":
+          setBillingteamList(groupData);
+          masterList.billingTeamList = formattedUsers;
+          break;
+        case "Chief of Approval":
+          setApproverList(groupData);
+          masterList.approverList = formattedUsers;
+          break;
+        default:
+          break;
+      }
+    });
+    setMasterList(masterList);
+    setIsLoading(false);
+    return masterList;
+  } catch (err) {
+    console.log("Error fetching user groups:", err);
+  }
+};
+
+import { sp } from "@pnp/sp/presets/all";
+
+export const userUpdateSubmission = async (
+  groupId: number,
+  existUsers: any[],
+  newUsers: any[],
+  initFunction: any,
+  handleClosePopup: any,
+  setToastResponse: any
+) => {
+  try {
+    const allUsers = [...existUsers, ...newUsers];
+    const userIds = allUsers.map((user) => user?.id || user?.userId);
+    const spPayload = {
+      UsersId: { results: userIds },
+    };
+
+    await SpServices.SPUpdateItem({
+      Listname: SPLists.UserConfigList,
+      ID: groupId,
+      RequestJSON: spPayload,
+    });
+    const spGroupUsers = await sp.web.siteGroups.getByName("Members").users();
+    const existingEmails = spGroupUsers.map((u) => u.Email.toLowerCase());
+    const usersToAdd = allUsers.filter(
+      (u) => !existingEmails.includes((u.email || u.userEmail)?.toLowerCase())
+    );
+    for (const user of usersToAdd) {
+      try {
+        const ensuredUser = await sp.web.ensureUser(
+          user.email || user.userEmail
+        );
+        await sp.web.siteGroups
+          .getByName("Members")
+          .users.add(ensuredUser.data.LoginName);
+      } catch (err) {
+        console.log(`Failed to add user: ${user.email}`, err);
+      }
+    }
+    setToastResponse({
+      severity: "success",
+      summary: "Sccuess",
+      detail: "User configured successfully!",
+      life: 3000,
+    });
+    handleClosePopup(0);
+    initFunction();
+  } catch (err) {
+    console.log("Error updating users and SharePoint group:", err);
+  }
+};
+
+export const removeUserFunction = async (
+  groupId: number,
+  updatedUsers: any[],
+  initFunction: any,
+  handleClosePopup: any,
+  setToastResponse: any
+) => {
+  try {
+    const userIds = updatedUsers?.map((user) => user?.id || user?.userId);
+    const spPayload = {
+      UsersId: { results: userIds },
+    };
+    await SpServices.SPUpdateItem({
+      Listname: SPLists.UserConfigList,
+      ID: groupId,
+      RequestJSON: spPayload,
+    });
+    setToastResponse({
+      severity: "success",
+      summary: "Sccuess",
+      detail: "User removed successfully!",
+      life: 3000,
+    });
+    handleClosePopup(1);
+    initFunction();
   } catch (err) {
     console.log("Error : ", err);
   }

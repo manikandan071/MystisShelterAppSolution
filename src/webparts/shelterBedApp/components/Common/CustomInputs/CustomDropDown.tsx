@@ -42,9 +42,11 @@ const CustomDropDown: React.FC<dropDownProps> = ({
   }, [labelText]);
   return (
     <div className={`inputSectionWrapper ${sectionType} custom-dropdown`}>
-      <label style={{ width: "100%", fontSize: "13px", fontWeight: "500" }}>
-        {labelText}{" "}
-        <strong style={{ color: "red" }}>{ismandatory ? "*" : ""}</strong>
+      <label className="input-label">
+        {labelText}
+        <span style={{ color: "red", marginLeft: "2px" }}>
+          {ismandatory ? "*" : ""}
+        </span>
       </label>
       <Dropdown
         value={value}
