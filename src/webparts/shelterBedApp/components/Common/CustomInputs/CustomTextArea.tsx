@@ -47,11 +47,9 @@ const CustomTextArea: React.FC<dropDownProps> = ({
   );
   return (
     <div className={`inputSectionWrapper ${sectionType} inputBox`}>
-      {labelText !== "" && (
-        <label style={{ width: "100%", fontSize: "13px" }}>{labelText}</label>
-      )}
+      {labelText !== "" && <label className="input-label">{labelText}</label>}
       <InputTextarea
-        style={{ fontSize: "13px" }}
+        style={{ fontSize: "13px", resize: "none", overflow: "auto" }}
         id="labelText"
         value={value}
         disabled={disabled}
@@ -63,6 +61,7 @@ const CustomTextArea: React.FC<dropDownProps> = ({
         }`}
         placeholder={placeholder}
         readOnly={readOnly}
+        autoResize={false}
       />
     </div>
   );

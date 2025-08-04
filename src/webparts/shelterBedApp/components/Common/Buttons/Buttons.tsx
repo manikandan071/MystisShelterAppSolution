@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import { Button } from "primereact/button";
 import "./Buttons.css";
@@ -6,7 +7,13 @@ interface ButtonProps {
   text: string;
   icon?: string;
   onClick: any;
-  btnType: "primaryBtn" | "secondaryBtn" | "submitBtn" | "cancelBtn";
+  btnType:
+    | "primaryBtn"
+    | "secondaryBtn"
+    | "submitBtn"
+    | "cancelBtn"
+    | "rejectBtn"
+    | "approvebtn";
   onlyIcon?: boolean;
   disabled?: boolean;
 }

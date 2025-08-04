@@ -39,12 +39,18 @@ import CustomTextArea from "../../Common/CustomInputs/CustomTextArea";
 import * as moment from "moment";
 import CustomSearchInput from "../../Common/CustomInputs/CustomSearchInput";
 
-const taskIcon = require("../../../assets/images/edit.png");
-const historyIcon = require("../../../assets/images/history.png");
-const deleteIcon = require("../../../assets/images/trash_active.png");
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import CustomToast from "../../Common/Toast/Toast";
+import Tooltip from "@mui/material/Tooltip";
 
-const defaultImg = require("../../../assets/images/trash.png");
-const hoverImg = require("../../../assets/images/trash_active.png");
+// const taskIcon = require("../../../assets/images/edit.png");
+// const historyIcon = require("../../../assets/images/history.png");
+// const deleteIcon = require("../../../assets/images/trash_active.png");
+
+// const defaultImg = require("../../../assets/images/trash.png");
+// const hoverImg = require("../../../assets/images/trash_active.png");
 
 interface bedProps {
   Id: number;
@@ -75,7 +81,7 @@ const BedConfig: React.FC = () => {
     {
       open: false,
       popupTitle: "",
-      popupWidth: "80%",
+      popupWidth: "65%",
       popupType: "custom",
       defaultCloseBtn: false,
       popupData: "",
@@ -91,7 +97,7 @@ const BedConfig: React.FC = () => {
     {
       open: false,
       popupTitle: "",
-      popupWidth: "80%",
+      popupWidth: "70%",
       popupType: "custom",
       defaultCloseBtn: false,
       popupData: "",
@@ -121,9 +127,6 @@ const BedConfig: React.FC = () => {
     },
   ]);
   const [deletedBedsList, setDeletedBedsList] = useState<any[]>([]);
-
-  // const [popupResponse, setPopupResponse] = useState(initialPopupResponse);
-  const [rowIndex, setRowIndex] = useState<number | null>(null);
   const [isUpdateDetails, setIsUpdateDetails] = useState<any>({
     Id: null,
     Type: "new",
@@ -137,6 +140,12 @@ const BedConfig: React.FC = () => {
   const [isLoader, setIsLoader] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<any>({
     SearchValue: "",
+  });
+  const [toastResponse, setToastResponse] = useState<any>({
+    severity: "",
+    summary: "",
+    detail: "",
+    life: 3000,
   });
 
   const onChange = (value: any, isBreakeCondition?: boolean) => {
@@ -188,6 +197,7 @@ const BedConfig: React.FC = () => {
         setTempBedsList,
         setIsUpdateDetails,
         handleClosePopup,
+        setToastResponse,
         0
       );
     } else if (isFormValid) {
@@ -199,6 +209,7 @@ const BedConfig: React.FC = () => {
         setTempBedsList,
         setIsUpdateDetails,
         handleClosePopup,
+        setToastResponse,
         0
       );
     }
@@ -225,13 +236,30 @@ const BedConfig: React.FC = () => {
     return !!duplicate;
   };
 
+  const getDateDifferenceIfStartIsGreater = (
+    sDateStr: string,
+    eDateStr: string
+  ) => {
+    const sDate = new Date(sDateStr);
+    const eDate = new Date(eDateStr);
+
+    sDate.setHours(0, 0, 0, 0);
+    eDate.setHours(0, 0, 0, 0);
+
+    const diffTime = eDate.getTime() - sDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "0days";
+    return `${Math.round(diffDays)}days`;
+  };
+
   const popupInputs: any[] = [
     [
       <div key={1} style={{ width: "100%" }}>
         <div className="section-wrapper padding-buttom-10 align-end space-between">
           <CustomDropDown
             options={sheltersList}
-            disabled={false}
+            disabled={isUpdateDetails?.Type === "new" ? false : true}
             onClick={(value: any) => {
               onChangeFunction("ShelterName", value, setFormDetails);
               const matchedBeds = tempBedslist
@@ -287,15 +315,16 @@ const BedConfig: React.FC = () => {
             isValid={formDetails?.ShelterName?.isValid}
             ismandatory={true}
           />
-          {isUpdateDetails?.Type === "new" && (
-            <CustomButton
-              btnType="primaryBtn"
-              icon="pi pi-plus"
-              onClick={addNewRow}
-              text="Bed"
-              disabled={getFirstInvalidErrorMsg(newBedsList) ? true : false}
-            />
-          )}
+          {isUpdateDetails?.Type === "new" &&
+            formDetails?.ShelterName?.value !== "" && (
+              <CustomButton
+                btnType="primaryBtn"
+                icon="pi pi-plus"
+                onClick={addNewRow}
+                text="Bed"
+                disabled={getFirstInvalidErrorMsg(newBedsList) ? true : false}
+              />
+            )}
         </div>
         {/* <label
           style={{
@@ -329,22 +358,23 @@ const BedConfig: React.FC = () => {
             style={{
               display: "flex",
               width: "100%",
-              gap: "30px",
+              gap: "33px",
               margin: "10px 0px",
               fontSize: "13px",
               fontWeight: "600",
               padding: "0px 10px",
             }}
           >
-            <label style={{ width: "40%" }}>
-              Bed Name <strong style={{ color: "red" }}>*</strong>
+            <label style={{ width: "40%" }} className="input-label">
+              Bed Name
+              <span style={{ color: "red", marginLeft: "2px" }}>*</span>
             </label>
-            <label>Description</label>
+            <label className="input-label">Description</label>
           </div>
           <div
             style={{
               minHeight: "50px",
-              maxHeight: "282px",
+              maxHeight: "298px",
               overflow: "auto",
               width: "100%",
               display: "flex",
@@ -388,12 +418,12 @@ const BedConfig: React.FC = () => {
                               const updatedState = [...prevState];
                               updatedState[0] = {
                                 ...updatedState[0],
-                                ["BedName"]: {
-                                  ...updatedState[0]["BedName"],
+                                BedName: {
+                                  ...updatedState[0].BedName,
                                   value,
                                   isValid: !isDuplicate,
                                   errorMessage: isDuplicate
-                                    ? `Bed ${value} already exists in ${isUpdateDetails?.ShelterName}`
+                                    ? `${value} already exists in ${isUpdateDetails?.ShelterName}`
                                     : "",
                                 },
                               };
@@ -428,11 +458,6 @@ const BedConfig: React.FC = () => {
                       inputType="text"
                       customClassName="right-redious-only"
                       isValid={beds?.BedName?.isValid}
-                      // onFoucs={
-                      //   formDetails?.Beds?.value?.length === index + 1
-                      //     ? true
-                      //     : false
-                      // }
                       onFoucs={beds?.BedName?.value === "" ? true : false}
                       readOnly={!formDetails?.ShelterName?.value}
                     />
@@ -441,9 +466,6 @@ const BedConfig: React.FC = () => {
                     value={beds?.BedDescription?.value}
                     placeholder="Enter Text"
                     labelText=""
-                    // onChange={(value: any) => {
-                    //   onChangeFunction("BedName", value, setFormDetails);
-                    // }}
                     onChange={(value: any) => {
                       rowOnChangeFunction(
                         "BedDescription",
@@ -461,16 +483,19 @@ const BedConfig: React.FC = () => {
                   />
                   <div style={{ alignSelf: "center" }}>
                     {newBedsList.length > 1 && (
-                      <img
-                        src={rowIndex === index ? hoverImg : defaultImg}
-                        alt="Icon"
-                        width={18}
-                        height={18}
-                        style={{ cursor: "pointer" }}
+                      <DeleteIcon
                         onClick={() => removeRow(beds?.BedName?.Id, index)}
-                        onMouseEnter={() => setRowIndex(index)}
-                        onMouseLeave={() => setRowIndex(null)}
-                        title="Delete"
+                        sx={{
+                          cursor: "pointer",
+                          backgroundColor: "#ffebee",
+                          padding: "4px",
+                          borderRadius: "6px",
+                          fontSize: "24px",
+                          color: "#f44336",
+                          "&:hover": {
+                            backgroundColor: "#ffcdd2",
+                          },
+                        }}
                       />
                     )}
                   </div>
@@ -485,13 +510,7 @@ const BedConfig: React.FC = () => {
     [
       <div key={2}>
         <p style={{ fontSize: "15px", fontWeight: "500", margin: "0px" }}>
-          Are sure want to delete{""}
-          {
-            tempBedslist?.filter(
-              (bed: any) => bed?.Id === isUpdateDetails?.Id
-            )[0]?.BedName
-          }{" "}
-          bed?
+          Are you sure want to delete the bed?
         </p>
       </div>,
     ],
@@ -499,12 +518,13 @@ const BedConfig: React.FC = () => {
       <div key={3} className="custom-data-table">
         <DataTable
           value={bedLogsList}
+          className="min_height_55vh"
           scrollable
-          scrollHeight="60vh"
+          scrollHeight="55vh"
           style={{ minWidth: "100%", minHeight: "30Vh", maxHeight: "65vh" }}
           key={0}
-          paginator={bedLogsList?.length > 0}
-          rows={10}
+          paginator={bedLogsList?.length > 10}
+          rows={9}
           paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
           currentPageReportTemplate={`Showing {first} to {last} of {totalRecords} ${
             bedLogsList?.length === 1 ? "record" : "records"
@@ -563,7 +583,7 @@ const BedConfig: React.FC = () => {
           />
           <Column
             field="BookedStartDate"
-            header="Booking Start Date"
+            header="Occupied On"
             style={{ width: "15%" }}
             body={(rowData) => (
               <OnTextRender
@@ -573,11 +593,33 @@ const BedConfig: React.FC = () => {
           />
           <Column
             field="BookedEndDate"
-            header="Booking End Date"
+            header="Vacated On"
             style={{ width: "15%" }}
             body={(rowData) => (
               <OnTextRender
-                text={moment(rowData?.BookedEndDate).format("DD-MM-YYYY")}
+                text={
+                  rowData?.BookedEndDate !== "-"
+                    ? moment(rowData?.BookedEndDate).format("DD-MM-YYYY")
+                    : "-"
+                }
+              />
+            )}
+          />
+          <Column
+            field="BookedEndDate"
+            header="Occupied Days"
+            style={{ width: "15%" }}
+            body={(rowData) => (
+              <OnTextRender
+                text={
+                  rowData?.BookedEndDate !== "-" &&
+                  rowData?.BookedStartDate !== "-"
+                    ? getDateDifferenceIfStartIsGreater(
+                        rowData?.BookedStartDate,
+                        rowData?.BookedEndDate
+                      )
+                    : "-"
+                }
               />
             )}
           />
@@ -592,6 +634,7 @@ const BedConfig: React.FC = () => {
         text: "Cancel",
         btnType: "cancelBtn",
         disabled: false,
+        startIcon: "pi pi-times-circle",
         onClick: () => {
           handleClosePopup(0);
           setNewBedsList([
@@ -620,8 +663,15 @@ const BedConfig: React.FC = () => {
       {
         text: "Submit",
         btnType: "primaryBtn",
-        disabled: getFirstInvalidErrorMsg(newBedsList) ? true : false,
+        startIcon: "pi pi-check-circle",
+        disabled:
+          formDetails?.ShelterName?.value === ""
+            ? true
+            : getFirstInvalidErrorMsg(newBedsList)
+            ? true
+            : false,
         onClick: () => {
+          rowValidateFunction(newBedsList, setNewBedsList, onChange);
           handleSubmitFuction();
         },
       },
@@ -631,6 +681,7 @@ const BedConfig: React.FC = () => {
         text: "No",
         btnType: "cancelBtn",
         disabled: false,
+        startIcon: "pi pi-times-circle",
         onClick: () => {
           handleClosePopup(1);
           setIsUpdateDetails({
@@ -644,12 +695,14 @@ const BedConfig: React.FC = () => {
         text: "Yes",
         btnType: "primaryBtn",
         disabled: false,
+        startIcon: "pi pi-check-circle",
         onClick: () => {
           if (isUpdateDetails?.Type === "delete") {
             deleteBedDetails(
               isUpdateDetails?.Id,
               setTempBedsList,
               handleClosePopup,
+              setToastResponse,
               1
             );
           }
@@ -661,6 +714,7 @@ const BedConfig: React.FC = () => {
         text: "Close",
         btnType: "cancelBtn",
         disabled: false,
+        startIcon: "pi pi-times-circle",
         onClick: () => {
           handleClosePopup(2);
           setIsUpdateDetails({
@@ -783,67 +837,88 @@ const BedConfig: React.FC = () => {
   const actionBoadyTemplate = (rowData: any) => {
     return (
       <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-        <img
-          alt="edit-icon"
-          src={taskIcon}
-          width={20}
-          height={20}
-          style={{ cursor: "pointer" }}
-          title="Edit Bed"
-          onClick={() => {
-            setIsUpdateDetails({
-              Id: rowData?.Id,
-              BedName: rowData?.Bedname,
-              ShelterId: rowData?.ShelterId,
-              ShelterName: rowData?.ShelterName,
-              Type: "update",
-              isLoading: false,
-            });
-          }}
-        />
-
-        <img
-          alt="history-icon"
-          src={historyIcon}
-          width={18}
-          height={18}
-          style={{ cursor: "pointer" }}
-          title="Bed Logs"
-          onClick={() => {
-            setIsUpdateDetails({
-              Id: rowData?.Id,
-              Type: "history",
-              isLoading: false,
-            });
-            togglePopupVisibility(
-              setPopupController,
-              2,
-              "open",
-              `Bed logs - ${rowData?.BedName} `
-            );
-          }}
-        />
-        <img
-          alt="delete-icon"
-          src={deleteIcon}
-          width={17}
-          height={17}
-          style={{ cursor: "pointer" }}
-          title="Delete Bed"
-          onClick={() => {
-            setIsUpdateDetails({
-              Id: rowData?.Id,
-              Type: "delete",
-              isLoading: false,
-            });
-            togglePopupVisibility(
-              setPopupController,
-              1,
-              "open",
-              `Confirmation`
-            );
-          }}
-        />
+        <Tooltip title="Edit">
+          <EditIcon
+            // title="Edit Bed"
+            onClick={() => {
+              setIsUpdateDetails({
+                Id: rowData?.Id,
+                BedName: rowData?.Bedname,
+                ShelterId: rowData?.ShelterId,
+                ShelterName: rowData?.ShelterName,
+                Type: "update",
+                isLoading: false,
+              });
+            }}
+            sx={{
+              cursor: "pointer",
+              backgroundColor: "#e3f2fd",
+              padding: "4px",
+              borderRadius: "6px",
+              fontSize: "24px",
+              "&:hover": {
+                backgroundColor: "#bbdefb",
+              },
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="Log">
+          <ScheduleIcon
+            // title="Bed Logs"
+            onClick={() => {
+              setIsUpdateDetails({
+                Id: rowData?.Id,
+                Type: "history",
+                isLoading: false,
+              });
+              togglePopupVisibility(
+                setPopupController,
+                2,
+                "open",
+                `Log - ${rowData?.BedName} `
+              );
+            }}
+            sx={{
+              cursor: "pointer",
+              backgroundColor: "#e3f2fd",
+              padding: "4px",
+              borderRadius: "6px",
+              fontSize: "24px",
+              "&:hover": {
+                backgroundColor: "#bbdefb",
+              },
+            }}
+          />
+        </Tooltip>
+        <Tooltip title="Delete">
+          <DeleteIcon
+            // title="Delete Bed"
+            onClick={() => {
+              setIsUpdateDetails({
+                Id: rowData?.Id,
+                Type: "delete",
+                isLoading: false,
+              });
+              togglePopupVisibility(
+                setPopupController,
+                1,
+                "open",
+                `Confirmation`
+              );
+            }}
+            sx={{
+              cursor: "pointer",
+              backgroundColor: "#ffebee",
+              padding: "4px",
+              borderRadius: "6px",
+              fontSize: "24px",
+              color: "#f44336",
+              "&:hover": {
+                backgroundColor: "#ffcdd2",
+              },
+            }}
+          />
+        </Tooltip>
       </div>
     );
   };
@@ -861,12 +936,41 @@ const BedConfig: React.FC = () => {
     setTempBedsList(filteredList);
   };
 
+  // const findOccupiedDays = (date: any) => {
+  //   const inputDate = new Date(date);
+  //   const today = new Date();
+
+  //   // Convert both dates to the same timezone (remove time part)
+  //   const inputDateOnly = new Date(
+  //     inputDate.getFullYear(),
+  //     inputDate.getMonth(),
+  //     inputDate.getDate()
+  //   );
+  //   const todayDateOnly = new Date(
+  //     today.getFullYear(),
+  //     today.getMonth(),
+  //     today.getDate()
+  //   );
+  //   const diffTime = Math.abs(
+  //     todayDateOnly.getTime() - inputDateOnly.getTime()
+  //   );
+  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  //   const result = diffDays === 1 ? "1 day" : `${diffDays} days`;
+
+  //   return result;
+  // };
+
   return (
     <div style={{ width: "100%" }}>
+      <CustomToast
+        toastResponse={toastResponse}
+        setToastResponse={setToastResponse}
+      />
       <div className={styles.dashboardHeader}>
-        <span className={styles.title}>Bed Details</span>
+        <span className={styles.heading}>Bed Details</span>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <CustomSearchInput
+            width="330px"
             value={searchQuery?.SearchValue}
             placeholder="Search"
             disabled={isLoader}
@@ -885,13 +989,13 @@ const BedConfig: React.FC = () => {
       <div className="custom-data-table">
         <DataTable
           value={tempBedslist}
-          className="min_height_68vh"
+          className="min_height_69vh"
           scrollable
           scrollHeight="60vh"
           style={{ minWidth: "100%" }}
           key={0}
           paginator={tempBedslist?.length > 0}
-          rows={10}
+          rows={9}
           paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
           currentPageReportTemplate={`Showing {first} to {last} of {totalRecords} ${
             tempBedslist?.length === 1 ? "record" : "records"
@@ -922,7 +1026,7 @@ const BedConfig: React.FC = () => {
           <Column
             field="BedName"
             header="Bed Name"
-            style={{ width: "20%" }}
+            style={{ width: "15%" }}
             body={(rowData) => (
               <OnTextRender text={rowData?.BedName} isBold={true} />
             )}
@@ -930,16 +1034,10 @@ const BedConfig: React.FC = () => {
           <Column
             field="ShelterName"
             header="Shelter Name"
-            style={{ width: "20%" }}
+            style={{ width: "15%" }}
             body={(rowData) => (
               <OnTextRender text={rowData?.ShelterName} isBold={true} />
             )}
-          />
-          <Column
-            field="BedStatus"
-            header="Bed Status"
-            style={{ width: "15%" }}
-            body={(rowData) => <OnStatusRender status={rowData?.BedStatus} />}
           />
           <Column
             field="ClientName"
@@ -949,7 +1047,7 @@ const BedConfig: React.FC = () => {
           />
           <Column
             field="BookedDate"
-            header="Booked Date"
+            header="Bed Occupied On"
             style={{ width: "15%" }}
             body={(rowData) => (
               <OnTextRender
@@ -962,9 +1060,33 @@ const BedConfig: React.FC = () => {
             )}
           />
           <Column
+            field="BookedDate"
+            header="Occupied Days"
+            style={{ width: "15%" }}
+            body={(rowData) => (
+              <OnTextRender
+                text={
+                  rowData.BookedDate !== "-"
+                    ? getDateDifferenceIfStartIsGreater(
+                        rowData.BookedDate,
+                        new Date().toISOString()
+                      )
+                    : "-"
+                }
+                isBold={true}
+              />
+            )}
+          />
+          <Column
+            field="BedStatus"
+            header="Bed Status"
+            style={{ width: "15%" }}
+            body={(rowData) => <OnStatusRender status={rowData?.BedStatus} />}
+          />
+          <Column
             field="Id"
             header="Action"
-            style={{ width: "15%" }}
+            style={{ width: "10%" }}
             body={actionBoadyTemplate}
           />
         </DataTable>
@@ -989,7 +1111,12 @@ const BedConfig: React.FC = () => {
           confirmationTitle={
             popupData.popupType !== "custom" ? popupData.popupTitle : ""
           }
-          errorMessage={getFirstInvalidErrorMsg(newBedsList)}
+          errorMessage={
+            // formDetails?.ShelterName?.value === "" && index === 0
+            //   ? "Please select shelter"
+            //   :
+            getFirstInvalidErrorMsg(newBedsList)
+          }
         />
       ))}
     </div>

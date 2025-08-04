@@ -30,8 +30,8 @@ interface Props {
 
 interface PopupActionBtn {
   text: string;
-  endIcon?: React.ReactNode;
-  startIcon?: React.ReactNode;
+  endIcon?: string;
+  startIcon?: string;
   disabled?: boolean;
   btnType: any;
   onClick: any;
@@ -84,18 +84,40 @@ const Popup = ({
           : styles.popupFooter
       }
     >
-      <span style={{ fontSize: "13px", fontWeight: "600", color: "red" }}>
-        {errorMessage}
-      </span>
-      {popupActions?.map((btn, id) => (
-        <CustomButton
-          key={id}
-          btnType={btn.btnType}
-          text={btn.text}
-          disabled={btn.disabled}
-          onClick={btn.onClick}
-        />
-      ))}
+      {popupActions?.map((btn, id) => {
+        return (
+          btn?.btnType === "cancelBtn" && (
+            <CustomButton
+              key={id}
+              btnType={btn.btnType}
+              text={btn.text}
+              disabled={btn.disabled}
+              onClick={btn.onClick}
+              // icon={btn.startIcon}
+            />
+          )
+        );
+      })}
+
+      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+        <span style={{ fontSize: "13px", fontWeight: "600", color: "red" }}>
+          {errorMessage}
+        </span>
+        {popupActions?.map((btn, id) => {
+          return (
+            btn?.btnType !== "cancelBtn" && (
+              <CustomButton
+                key={id}
+                btnType={btn.btnType}
+                text={btn.text}
+                disabled={btn.disabled}
+                onClick={btn.onClick}
+                // icon={btn.startIcon}
+              />
+            )
+          );
+        })}
+      </div>
     </div>
   );
 

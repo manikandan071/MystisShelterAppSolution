@@ -154,6 +154,11 @@ export const OnStatusRender: React.FC<IStatusRenderProps> = ({ status }) => {
       <span
         className={`status-badge ${status?.toLowerCase().replace(/\s/g, "-")}`}
       >
+        {status === "Available" ? (
+          <i className="pi pi-verified" />
+        ) : (
+          <i className="pi pi-times-circle" />
+        )}
         {status}
       </span>
     </div>

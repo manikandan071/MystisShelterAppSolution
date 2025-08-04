@@ -98,3 +98,12 @@
 .space-between{
     justify-content: space-between !important;
 }
+
+
+.input-label{
+    display: flex;
+    margin-bottom: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: Internormal,sans-serif !important;
+}

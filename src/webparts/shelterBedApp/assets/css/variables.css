@@ -4,21 +4,21 @@
     --section-header-font-color :#403b3b;
     --section-header-secondary-font-color :#6b5e43;
     /* --input-fields-border-color: #d3d3f1a3; */
-    --input-fields-border-color: #68687d61;
-    --input-fields-border-hovor-color: #c8c8f0;
+    --input-fields-border-color: #6f6a8a75;
+    --input-fields-border-hovor-color: #b99223;
     --input-fields-bg-hovor-color: #b4b1d81b;
     --basic-font-color: #555555;
     --header-font-color: #4e232a;
     --input-label-font-color: #5e6285;
     --input-placeholder-font-color: #a2a2a2;
     --font-family-main: 'Inter', sans-serif;
-    --data-table-header-bg-color: #b08a1d33;
-    --data-table-header-font-color: #160364;
+    --data-table-header-bg-color: #f7faff;
+    --data-table-header-font-color: #000000d9;
     --data-table-body-border-color: #f2f2f2;
     --data-table-footer-font-color: #676767;
-    --data-table-paginator-active-bg-color: #4e232a;
-    --data-table-paginator-hover-bg-color: #e9ecefe0;
-    --data-table-paginator-active-font-color: #fff;
+    --data-table-paginator-active-bg-color: #b99223;
+    --data-table-paginator-hover-bg-color: #efe8d2;
+    --data-table-paginator-active-font-color: #000;
     --data-table-paginator-disabled-button-color: #cccccc;
 }
 

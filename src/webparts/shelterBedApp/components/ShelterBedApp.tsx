@@ -1,7 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
-
 import MainComponent from "./MainComponent";
-
 // export default class ShelterBedApp extends React.Component<
 //   IShelterBedAppProps,
 //   {}

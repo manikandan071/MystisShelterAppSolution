@@ -8,15 +8,19 @@
 .toggleBar {
     display: flex;
     align-items: center;
-    padding: 20px;
     user-select: none;
+    button{
+        font-family: Internormal, sans-serif !important;
+        font-size: 13px;
+        letter-spacing: .4px;
+    }
 }
 .tabBtn{
     background-color: transparent;
     // color: #00000099;
     color:#b08a1d;
     font-size: 14px;
-    font-weight: 600;
+    // font-weight: 600;
     padding: 7px 28px;
     border: none;
     border: 1px solid #b08a1d;
@@ -26,7 +30,7 @@
     background-color: #b08a1d;
     color: #fff;
     font-size: 14px;
-    font-weight: 600;
+    // font-weight: 600;
     padding: 7px 28px;
     border: none;
     border: 1px solid #b08a1d;

@@ -1,31 +1,36 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import * as React from "react";
 import "./style.css";
 import Dashboard from "./Dashboard/Dashboard";
 import "primereact/resources/themes/bootstrap4-light-blue/theme.css";
-import { Toast } from "primereact/toast";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { sp } from "@pnp/sp/presets/all";
 import ConfigurationScreen from "./Configurations/ConfigurationScreen";
 import Loader from "./Loader/Loader";
+import "../assets/css/variables.css";
+import "../assets/css/commonstyle.css";
+import CustomToast from "./Common/Toast/Toast";
 
 interface Iuser {
-  Id: number | null;
+  Id: number | undefined;
   Title: string;
   Email: string;
 }
 
 const MainComponent: any = (props: any) => {
+  const [toastResponse, setToastResponse] = useState<any>({
+    severity: "",
+    summary: "",
+    detail: "",
+    life: 3000,
+  });
+
   const [CurrentRole, setCurrentRole] = useState<string>("");
   const [loader, setLoader] = useState<boolean>(false);
   const [users, setUsers] = useState<Iuser[]>([]);
-  const toast: any = useRef(null);
   const CurrentUser = props?.context?._pageContext?._user?.email;
   const [configpage, setconfigpage] = useState<boolean>(false);
-
-  // err function
-  const errFunction = (err: string, funcName: string): void => {
-    console.log(err, funcName);
-  };
 
   //get Userconfig data
   const getUserConfig = (userList: any) => {
@@ -59,7 +64,7 @@ const MainComponent: any = (props: any) => {
         getUserConfig([...userList]);
       })
       .catch((err) => {
-        errFunction("Error getUser:", err);
+        console.log("Error : ", err);
       });
   };
 
@@ -69,7 +74,7 @@ const MainComponent: any = (props: any) => {
     msg: string,
     life?: number | null
   ): any => {
-    toast.current.show({
+    setToastResponse({
       severity: serverity,
       summary: summary,
       detail: msg,
@@ -78,7 +83,7 @@ const MainComponent: any = (props: any) => {
   };
   useEffect(() => {
     setLoader(true);
-    getUser(); // Call the async function inside useEffect
+    getUser();
   }, []);
   return loader ? (
     <Loader />
@@ -91,13 +96,20 @@ const MainComponent: any = (props: any) => {
           CurrentUser={CurrentUser}
           CurrentRole={CurrentRole}
           setconfigpage={setconfigpage}
+          context={props?.context}
         />
-        <Toast ref={toast} />
+        <CustomToast
+          toastResponse={toastResponse}
+          setToastResponse={setToastResponse}
+        />
       </div>
     </>
   ) : (
     <div>
-      <ConfigurationScreen setconfigpage={setconfigpage} />
+      <ConfigurationScreen
+        setconfigpage={setconfigpage}
+        context={props?.context}
+      />
     </div>
   );
 };
