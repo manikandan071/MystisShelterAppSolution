@@ -117,9 +117,11 @@ const UserConfig = (props: IProps) => {
     detail: "",
     life: 3000,
   });
-  const [activeGroupTab, setActiveGroupTab] = React.useState<
+  const [activeGroupTab, setActiveGroupTab] = useState<
     "supervisor" | "billing" | "approver" | ""
   >("");
+  const [activeGroupID, setActiveGroupID] = useState<number | null>(null);
+
   const [formDetails, setFormDetails] = useState<any>({
     Id: 0,
     Users: [],
@@ -133,15 +135,23 @@ const UserConfig = (props: IProps) => {
 
   const initFunction = async () => {
     setSearchValue("");
-    const tempMasterData = await fetchUserGroupsAndUsers(
+    fetchUserGroupsAndUsers(
       setSupervisorList,
       setBillingteamList,
       setApproverList,
       setMasterList,
       setIsLoading
     );
-    setMasterList(tempMasterData);
     setActiveGroupTab(activeGroupTab === "" ? "supervisor" : activeGroupTab);
+    setActiveGroupID(
+      activeGroupTab === ""
+        ? 1
+        : activeGroupTab === "supervisor"
+        ? supervisorList?.groupId
+        : activeGroupTab === "billing"
+        ? billingteamList?.groupId
+        : approverList?.groupId
+    );
   };
 
   useEffect(() => {
@@ -207,20 +217,22 @@ const UserConfig = (props: IProps) => {
           <span style={{ color: "red", marginLeft: "2px" }}>*</span>
         </label>
         <PeoplePicker
+          key={1}
           styles={popupMultiPeoplePickerStyle}
           context={props?.context}
           webAbsoluteUrl={props?.context?._pageContext?._site?.absoluteUrl}
           // titleText="Select Users"
-          placeholder="Enter name"
+          placeholder="Enter text"
           personSelectionLimit={5}
-          showtooltip={true}
+          showtooltip={false}
+          ensureUser={true}
           defaultSelectedUsers={
             formDetails?.Users?.map(
               (item: any) => item.userEmail || item.Email || item.email
             ) || []
           }
           onChange={handleChange}
-          resolveDelay={1000}
+          // resolveDelay={1000}
           principalTypes={[PrincipalType.User]}
         />
       </div>,
@@ -273,7 +285,7 @@ const UserConfig = (props: IProps) => {
     [
       {
         text: "No",
-        btnType: "cancelBtn",
+        btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
         onClick: () => {
@@ -289,6 +301,11 @@ const UserConfig = (props: IProps) => {
           removeUserFunction(
             formDetails?.Id,
             formDetails?.Users,
+            activeGroupTab === "supervisor"
+              ? masterList?.supervisorList
+              : activeGroupTab === "billing"
+              ? masterList?.billingTeamList
+              : masterList?.approverList,
             initFunction,
             handleClosePopup,
             setToastResponse
@@ -298,34 +315,28 @@ const UserConfig = (props: IProps) => {
     ],
   ];
 
+  const removeUserFromGroup = (userId: number, groupId: number | null) => {
+    const userToRemove = (
+      activeGroupTab === "supervisor"
+        ? supervisorList?.users
+        : activeGroupTab === "billing"
+        ? billingteamList?.users
+        : approverList?.users
+    )?.find((user: any) => user?.userId === userId);
+    setFormDetails({
+      Id: groupId,
+      Users: [userToRemove],
+    });
+    togglePopupVisibility(setPopupController, 1, "open", `Confirmation`);
+  };
+
   const actionBoadyTemplate = (rowData: any) => {
     return (
       <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
         <Tooltip title="Delete">
           <DeleteIcon
             onClick={() => {
-              console.log(masterList);
-
-              setFormDetails({
-                Id:
-                  activeGroupTab === "supervisor"
-                    ? supervisorList?.groupId
-                    : activeGroupTab === "billing"
-                    ? billingteamList?.groupId
-                    : approverList?.groupId,
-                Users: (activeGroupTab === "supervisor"
-                  ? masterList?.supervisorList
-                  : activeGroupTab === "billing"
-                  ? masterList?.billingTeamList
-                  : masterList?.approverList
-                )?.filter((user: any) => user?.userId !== rowData?.userId),
-              });
-              togglePopupVisibility(
-                setPopupController,
-                1,
-                "open",
-                `Confirmation`
-              );
+              removeUserFromGroup(rowData?.userId, activeGroupID);
             }}
             sx={{
               cursor: "pointer",
@@ -384,6 +395,7 @@ const UserConfig = (props: IProps) => {
             }`}
             onClick={() => {
               setActiveGroupTab("supervisor");
+              setActiveGroupID(1);
               setSearchValue("");
               setSupervisorList((prev: any) => {
                 return { ...prev, users: masterList.supervisorList };
@@ -400,6 +412,7 @@ const UserConfig = (props: IProps) => {
             }`}
             onClick={() => {
               setActiveGroupTab("billing");
+              setActiveGroupID(2);
               setSearchValue("");
               setBillingteamList((prev: any) => {
                 return { ...prev, users: masterList.billingTeamList };
@@ -420,6 +433,7 @@ const UserConfig = (props: IProps) => {
             }`}
             onClick={() => {
               setActiveGroupTab("approver");
+              setActiveGroupID(3);
               setSearchValue("");
               setApproverList((prev: any) => {
                 return { ...prev, users: masterList.approverList };

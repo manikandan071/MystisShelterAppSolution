@@ -55,7 +55,7 @@ const CustomSearchInput: React.FC<dropDownProps> = ({
         <InputText
           style={{
             padding: "0.5rem 0.75rem",
-            fontSize: "0.8rem",
+            fontSize: "13px",
             height: "32px",
             borderRadius: "4px",
             paddingLeft: "2.5rem",

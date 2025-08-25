@@ -39,11 +39,13 @@ import CustomTextArea from "../../Common/CustomInputs/CustomTextArea";
 import * as moment from "moment";
 import CustomSearchInput from "../../Common/CustomInputs/CustomSearchInput";
 
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import CustomToast from "../../Common/Toast/Toast";
 import Tooltip from "@mui/material/Tooltip";
+import { Dropdown } from "primereact/dropdown";
 
 // const taskIcon = require("../../../assets/images/edit.png");
 // const historyIcon = require("../../../assets/images/history.png");
@@ -140,6 +142,8 @@ const BedConfig: React.FC = () => {
   const [isLoader, setIsLoader] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<any>({
     SearchValue: "",
+    ShelterValue: "",
+    ShelterDrpValue: [],
   });
   const [toastResponse, setToastResponse] = useState<any>({
     severity: "",
@@ -162,6 +166,7 @@ const BedConfig: React.FC = () => {
         value: "",
         isValid: true,
         isMandatory: true,
+        isDeletion: true,
       },
       BedDescription: {
         value: "",
@@ -270,6 +275,7 @@ const BedConfig: React.FC = () => {
                     isValid: true,
                     isMandatory: true,
                     Id: bed?.Id,
+                    isDeletion: !bed?.isPermission,
                   },
                   BedDescription: {
                     value: bed?.Description !== "-" ? bed?.Description : "",
@@ -481,24 +487,47 @@ const BedConfig: React.FC = () => {
                     isValid={beds?.BedDescription?.isValid}
                     readOnly={!formDetails?.ShelterName?.value}
                   />
-                  <div style={{ alignSelf: "center" }}>
-                    {newBedsList.length > 1 && (
-                      <DeleteIcon
-                        onClick={() => removeRow(beds?.BedName?.Id, index)}
-                        sx={{
-                          cursor: "pointer",
-                          backgroundColor: "#ffebee",
-                          padding: "4px",
-                          borderRadius: "6px",
-                          fontSize: "24px",
-                          color: "#f44336",
-                          "&:hover": {
-                            backgroundColor: "#ffcdd2",
-                          },
-                        }}
-                      />
+                  {isUpdateDetails?.Type === "new" &&
+                    newBedsList.length > 1 &&
+                    beds?.BedName?.isDeletion && (
+                      <div style={{ alignSelf: "center" }}>
+                        {getFirstInvalidErrorMsg(newBedsList) ? (
+                          !beds?.BedName?.isValid && (
+                            <DeleteIcon
+                              onClick={() =>
+                                removeRow(beds?.BedName?.Id, index)
+                              }
+                              sx={{
+                                cursor: "pointer",
+                                backgroundColor: "#ffebee",
+                                padding: "4px",
+                                borderRadius: "6px",
+                                fontSize: "24px",
+                                color: "#f44336",
+                                "&:hover": {
+                                  backgroundColor: "#ffcdd2",
+                                },
+                              }}
+                            />
+                          )
+                        ) : (
+                          <DeleteIcon
+                            onClick={() => removeRow(beds?.BedName?.Id, index)}
+                            sx={{
+                              cursor: "pointer",
+                              backgroundColor: "#ffebee",
+                              padding: "4px",
+                              borderRadius: "6px",
+                              fontSize: "24px",
+                              color: "#f44336",
+                              "&:hover": {
+                                backgroundColor: "#ffcdd2",
+                              },
+                            }}
+                          />
+                        )}
+                      </div>
                     )}
-                  </div>
                 </div>
               );
             })}
@@ -679,7 +708,7 @@ const BedConfig: React.FC = () => {
     [
       {
         text: "No",
-        btnType: "cancelBtn",
+        btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
         onClick: () => {
@@ -734,7 +763,12 @@ const BedConfig: React.FC = () => {
   };
   useEffect(() => {
     fetchShelterDetails(setSheltersList);
-    fetchBedDetails(setMasterBedslist, setTempBedsList, setIsLoader);
+    fetchBedDetails(
+      setMasterBedslist,
+      setTempBedsList,
+      setSearchQuery,
+      setIsLoader
+    );
   }, []);
   useEffect(() => {
     if (isUpdateDetails?.Type === "history") {
@@ -890,50 +924,80 @@ const BedConfig: React.FC = () => {
             }}
           />
         </Tooltip>
-        <Tooltip title="Delete">
-          <DeleteIcon
-            // title="Delete Bed"
-            onClick={() => {
-              setIsUpdateDetails({
-                Id: rowData?.Id,
-                Type: "delete",
-                isLoading: false,
-              });
-              togglePopupVisibility(
-                setPopupController,
-                1,
-                "open",
-                `Confirmation`
-              );
-            }}
-            sx={{
-              cursor: "pointer",
-              backgroundColor: "#ffebee",
-              padding: "4px",
-              borderRadius: "6px",
-              fontSize: "24px",
-              color: "#f44336",
-              "&:hover": {
-                backgroundColor: "#ffcdd2",
-              },
-            }}
-          />
-        </Tooltip>
+        {!rowData?.isPermission && (
+          <Tooltip title="Delete">
+            <DeleteIcon
+              // title="Delete Bed"
+              onClick={() => {
+                setIsUpdateDetails({
+                  Id: rowData?.Id,
+                  Type: "delete",
+                  isLoading: false,
+                });
+                togglePopupVisibility(
+                  setPopupController,
+                  1,
+                  "open",
+                  `Confirmation`
+                );
+              }}
+              sx={{
+                cursor: "pointer",
+                backgroundColor: "#ffebee",
+                padding: "4px",
+                borderRadius: "6px",
+                fontSize: "24px",
+                color: "#f44336",
+                "&:hover": {
+                  backgroundColor: "#ffcdd2",
+                },
+              }}
+            />
+          </Tooltip>
+        )}
       </div>
     );
   };
 
-  const searchAndFilter = (value: string, key: string) => {
+  const searchAndFilter = (
+    value: string | { code: string; name: string },
+    key: string
+  ) => {
+    // Update state of search + dropdown together
     setSearchQuery((prev: any) => {
-      return { ...prev, [key]: value };
+      const newQuery = { ...prev, [key]: value };
+
+      let filteredList = masterBedslist;
+
+      // 1. Filter by shelter if selected
+      if (newQuery.ShelterValue && newQuery.ShelterValue.name) {
+        filteredList = filteredList.filter(
+          (bed: bedProps) =>
+            bed?.ShelterName?.toLowerCase() ===
+            newQuery.ShelterValue.name.toLowerCase()
+        );
+      }
+
+      // 2. Filter by search text if entered
+      if (newQuery.SearchValue && newQuery.SearchValue.trim() !== "") {
+        filteredList = filteredList.filter(
+          (bed: bedProps) =>
+            bed?.BedName?.toLowerCase().includes(
+              newQuery.SearchValue.toLowerCase()
+            ) ||
+            bed?.ShelterName?.toLowerCase().includes(
+              newQuery.SearchValue.toLowerCase()
+            ) ||
+            bed?.BedStatus?.toLowerCase().includes(
+              newQuery.SearchValue.toLowerCase()
+            )
+        );
+      }
+
+      setTempBedsList(filteredList);
+
+      return newQuery;
     });
-    const filteredList = masterBedslist?.filter((bed: bedProps) => {
-      return (
-        bed?.BedName.toLowerCase().includes(value?.toLowerCase()) ||
-        bed?.ShelterName?.toLowerCase().includes(value?.toLowerCase())
-      );
-    });
-    setTempBedsList(filteredList);
   };
 
   // const findOccupiedDays = (date: any) => {
@@ -969,6 +1033,14 @@ const BedConfig: React.FC = () => {
       <div className={styles.dashboardHeader}>
         <span className={styles.heading}>Bed Details</span>
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          <Dropdown
+            style={{ width: "250px", height: "32px" }}
+            value={searchQuery.ShelterValue}
+            onChange={(e) => searchAndFilter(e.value, "ShelterValue")}
+            options={searchQuery.ShelterDrpValue}
+            optionLabel="name"
+            placeholder="Select a shelter"
+          />
           <CustomSearchInput
             width="330px"
             value={searchQuery?.SearchValue}
@@ -978,6 +1050,31 @@ const BedConfig: React.FC = () => {
               searchAndFilter(value, "SearchValue");
             }}
           />
+          <Tooltip title="Reset Filter">
+            <RestartAltIcon
+              onClick={() => {
+                setTempBedsList([...masterBedslist]);
+                setSearchQuery((prev: any) => {
+                  return {
+                    ...prev,
+                    SearchValue: "",
+                    ShelterValue: "",
+                  };
+                });
+              }}
+              sx={{
+                cursor: "pointer",
+                backgroundColor: "#e7f0e7de",
+                padding: "4px",
+                borderRadius: "6px",
+                fontSize: "32px",
+                color: "#b99223",
+                "&:hover": {
+                  backgroundColor: "#cbfbbbc2",
+                },
+              }}
+            />
+          </Tooltip>
           <CustomButton
             btnType="primaryBtn"
             // icon="pi pi-plus"

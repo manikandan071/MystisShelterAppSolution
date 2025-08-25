@@ -99,7 +99,21 @@ const Popup = ({
         );
       })}
 
-      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "15px",
+          width: popupActions?.some((btn) => btn?.btnType === "cancelBtn")
+            ? "auto"
+            : "100%",
+          justifyContent: popupActions?.some(
+            (btn) => btn?.btnType === "cancelBtn"
+          )
+            ? "flex-start"
+            : "flex-end",
+        }}
+      >
         <span style={{ fontSize: "13px", fontWeight: "600", color: "red" }}>
           {errorMessage}
         </span>

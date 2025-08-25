@@ -3,11 +3,11 @@ $primaryColor: #b99223;
 .maincontainer {
   background: #f9fafb;
   padding: 15px 15px 0px 15px;
-  .bannerSection{
+  .bannerSection {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    .logoSection{
+    .logoSection {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -19,7 +19,7 @@ $primaryColor: #b99223;
       .heading {
         color: #414141;
         font-size: 20px;
-        font-weight: 600; 
+        font-weight: 600;
       }
     }
   }
@@ -125,6 +125,25 @@ $primaryColor: #b99223;
     border-radius: 4px !important;
   }
 }
+.confirmationModalFooter {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  .activeBtn {
+    background-color: $primaryColor;
+    border: none !important;
+    border-radius: 4px !important;
+  }
+
+  .cancelBtn {
+    background-color: transparent;
+    border: none !important;
+    border-radius: 4px !important;
+    color: #000;
+  }
+}
 .fieldssm {
   width: 33%;
   display: flex;
@@ -169,7 +188,7 @@ $primaryColor: #b99223;
   gap: 6px;
   cursor: pointer;
   max-width: 350px;
-  .fileText{
+  .fileText {
     font-size: 13px;
     overflow: hidden;
     white-space: nowrap;

@@ -11,6 +11,7 @@ import Loader from "./Loader/Loader";
 import "../assets/css/variables.css";
 import "../assets/css/commonstyle.css";
 import CustomToast from "./Common/Toast/Toast";
+import NoRoleScreen from "./NoRoleScreen/NoRoleScreen";
 
 interface Iuser {
   Id: number | undefined;
@@ -32,6 +33,25 @@ const MainComponent: any = (props: any) => {
   const CurrentUser = props?.context?._pageContext?._user?.email;
   const [configpage, setconfigpage] = useState<boolean>(false);
 
+  const checkRoleBasedOnAction = () => {
+    sp.web.lists
+      .getByTitle("UserConfig")
+      .items.select("*", "Users/Id", "Users/EMail")
+      .expand("Users")
+      .filter(`Users/EMail eq '${CurrentUser}'`)
+      .top(5000)
+      .get()
+      .then(async (items) => {
+        if (CurrentRole !== items[0].Role) {
+          setCurrentRole(items[0].Role);
+        }
+      })
+      .catch((err) => {
+        setCurrentRole("No Role");
+        console.error("Error get all userconfig:", err);
+      });
+  };
+
   //get Userconfig data
   const getUserConfig = (userList: any) => {
     sp.web.lists
@@ -48,6 +68,8 @@ const MainComponent: any = (props: any) => {
         setLoader(false);
       })
       .catch((err) => {
+        setLoader(false);
+        setCurrentRole("No Role");
         console.error("Error get all userconfig:", err);
       });
   };
@@ -87,6 +109,8 @@ const MainComponent: any = (props: any) => {
   }, []);
   return loader ? (
     <Loader />
+  ) : CurrentRole === "No Role" ? (
+    <NoRoleScreen />
   ) : !configpage ? (
     <>
       <div>
@@ -97,6 +121,7 @@ const MainComponent: any = (props: any) => {
           CurrentRole={CurrentRole}
           setconfigpage={setconfigpage}
           context={props?.context}
+          checkRoleBasedOnAction={checkRoleBasedOnAction}
         />
         <CustomToast
           toastResponse={toastResponse}
@@ -109,6 +134,8 @@ const MainComponent: any = (props: any) => {
       <ConfigurationScreen
         setconfigpage={setconfigpage}
         context={props?.context}
+        CurrentRole={CurrentRole}
+        checkRoleBasedOnAction={checkRoleBasedOnAction}
       />
     </div>
   );

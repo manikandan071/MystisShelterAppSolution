@@ -31,3 +31,9 @@
   border: none !important;
   padding: 0px;
 }
+.closeBtn {
+  background-color: transparent;
+  color: #000;
+  border: none !important;
+  padding: 0px;
+}
