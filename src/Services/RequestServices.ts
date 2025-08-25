@@ -7,6 +7,7 @@
 import * as moment from "moment";
 import { SPLists } from "../Config/Config";
 import SpServices from "./SPServices/SpServices";
+import { sp } from "@pnp/sp/presets/all";
 
 export const fetchRequestLogs = async () => {
   try {
@@ -90,6 +91,7 @@ export const fetchBedslogs = async (setmasterBedLogData: any) => {
 };
 
 export const fetchBedRequest = async (
+  CurrentRole: string,
   dropdown: any,
   setdrpdowns: any,
   setmasterData: any,
@@ -97,6 +99,7 @@ export const fetchBedRequest = async (
   setloader: any
 ) => {
   try {
+    const user = await sp.web.currentUser.get();
     const _dropdown: any = { ...dropdown };
     const requestLogs: any[] = (await fetchRequestLogs()) || [];
     const requestResponse = await SpServices.SPReadItems({
@@ -114,7 +117,15 @@ export const fetchBedRequest = async (
       Orderby: "ID",
       Orderbydecorasc: false,
     });
-    const bedRequestDetailsPromises = requestResponse?.map(async (data) => {
+    let filteredRequests = requestResponse;
+    if (CurrentRole === "Supervisor") {
+      filteredRequests = requestResponse.filter(
+        (request) =>
+          request?.RequestedBy?.EMail?.toLowerCase() ===
+          user?.Email?.toLowerCase()
+      );
+    }
+    const bedRequestDetailsPromises = filteredRequests?.map(async (data) => {
       const arrAttach: any[] = await data?.AttachmentFiles?.map((val: any) => {
         return {
           etag: "",

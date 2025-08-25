@@ -7,6 +7,49 @@
 import { SPLists } from "../Config/Config";
 import SpServices from "./SPServices/SpServices";
 
+const fetchUsedShetersData = async () => {
+  try {
+    const requestResponse = await SpServices.SPReadItems({
+      Listname: SPLists.RequestList,
+      Select:
+        "*,RequestedBy/Id,RequestedBy/Title,RequestedBy/EMail,AttachmentFiles,Bed/Id,Bed/Title,Shelter/Id,Shelter/Title",
+      Expand: "RequestedBy,AttachmentFiles,Bed,Shelter",
+      Filter: [
+        {
+          FilterKey: "IsDelete",
+          Operator: "ne",
+          FilterValue: 1,
+        },
+        {
+          FilterKey: "Status",
+          Operator: "ne",
+          FilterValue: "Closed",
+        },
+      ],
+      Orderby: "ID",
+      Orderbydecorasc: false,
+    });
+    const uniqueShelterBeds = Array.from(
+      new Map(
+        requestResponse
+          .filter((data: any) => data.Shelter?.Title && data.Bed?.Title)
+          .map((data: any) => [
+            `${data.Shelter.Title}-${data.Bed.Title}`, // unique key
+            {
+              Shelter: data.Shelter.Title,
+              ShelterId: data.Shelter.Id,
+              Bed: data.Bed.Title,
+              BedId: data.Bed.Id,
+            },
+          ])
+      ).values()
+    );
+    return uniqueShelterBeds;
+  } catch (err) {
+    console.log("Error : ", err);
+  }
+};
+
 export const fetchShelterDetailsMaster = async (
   setMasterState: any,
   setTempState: any,
@@ -14,6 +57,10 @@ export const fetchShelterDetailsMaster = async (
 ) => {
   try {
     isLoader(true);
+    const usedSheltersList: any = await fetchUsedShetersData();
+    const usedShelterIds = new Set(
+      usedSheltersList?.map((item: any) => item.ShelterId)
+    );
     const shelterListResponse = await SpServices.SPReadItems({
       Listname: SPLists.ShelterConfigList,
       Filter: [
@@ -23,17 +70,18 @@ export const fetchShelterDetailsMaster = async (
           FilterValue: 1,
         },
       ],
+      Orderby: "ID",
+      Orderbydecorasc: false,
     });
-    const tempBedDetails = shelterListResponse
-      ?.map((shelter: any) => {
-        const shelterId = shelter?.ID;
-        return {
-          Id: shelterId,
-          ShelterName: shelter?.Title,
-          Descriptions: shelter?.Description,
-        };
-      })
-      .sort((a, b) => b.Id - a.Id);
+    const tempBedDetails = shelterListResponse?.map((shelter: any) => {
+      const shelterId = shelter?.ID;
+      return {
+        Id: shelterId,
+        ShelterName: shelter?.Title,
+        Descriptions: shelter?.Description,
+        isPermission: usedShelterIds.has(shelterId),
+      };
+    });
     setMasterState([...tempBedDetails]);
     setTempState([...tempBedDetails]);
     isLoader(false);
@@ -117,6 +165,7 @@ export const fetchBedLogDetails = async (
 export const fetchBedDetails = async (
   setMasterBedslist: any,
   setTempBedsList: any,
+  setSearchQuery: any,
   setIsLoader: any
 ) => {
   try {
@@ -163,12 +212,27 @@ export const fetchBedDetails = async (
           BookedDate: bed?.BedOccupiedOn || "-",
           RequestStatus: matchingRequest?.Status || "-",
           Description: bed?.Description || "-",
+          isPermission: bed?.AvailabilityStatus !== "Available" ? true : false,
         };
       })
       .sort((a, b) => b.Id - a.Id);
 
     setMasterBedslist(tempBedDetails);
     setTempBedsList(tempBedDetails);
+    const uniqueShelters = Array.from(
+      new Map(
+        bedListResponse.map((bed: any) => [
+          bed?.Shelter?.Id,
+          {
+            code: bed?.Shelter?.Id,
+            name: bed?.Shelter?.Title,
+          },
+        ])
+      ).values()
+    );
+    setSearchQuery((prev: any) => {
+      return { ...prev, ShelterDrpValue: uniqueShelters };
+    });
     setIsLoader(false);
   } catch (err) {
     console.error("Error fetching bed/request details:", err);
@@ -391,6 +455,7 @@ export const deleteBedDetails = async (
 };
 
 export const submitSheltersDetails = async (
+  setIsLoader: any,
   formDetails: any,
   setMasterState: any,
   setTempState: any,
@@ -399,6 +464,7 @@ export const submitSheltersDetails = async (
   index: number
 ) => {
   try {
+    setIsLoader(true);
     const tempArray: any[] = [];
 
     // ✅ Create array of promises for SPAddItem
@@ -433,6 +499,7 @@ export const submitSheltersDetails = async (
       [...tempArray, ...prev].sort((a, b) => b.Id - a.Id)
     );
     handleClosePopup(index);
+    setIsLoader(false);
     setToastResponse({
       severity: "success",
       summary: "Sccuess",
@@ -444,6 +511,7 @@ export const submitSheltersDetails = async (
   }
 };
 export const updateSheltersDetails = async (
+  setIsLoader: any,
   formDetails: any,
   deletedBedsList: any[],
   setMasterState: any,
@@ -454,6 +522,7 @@ export const updateSheltersDetails = async (
   index: number
 ) => {
   try {
+    setIsLoader(true);
     // const newBedsArray: any[] = [];
 
     // const shelterId = formDetails?.ShelterName?.value?.Id;
@@ -568,6 +637,7 @@ export const updateSheltersDetails = async (
     setIsUpdateDetails((prev: any) => {
       return { ...prev, Id: null, Type: "", isLoading: false };
     });
+    setIsLoader(false);
     setToastResponse({
       severity: "success",
       summary: "Sccuess",
@@ -579,17 +649,52 @@ export const updateSheltersDetails = async (
   }
 };
 export const deleteShelterDetails = async (
+  setIsLoader: any,
   shelterId: number,
+  setMasterSheltersList: any,
   setSheltersList: any,
   handleClosePopup: any,
   setToastResponse: any,
   index: number
 ) => {
   try {
+    setIsLoader(true);
     await SpServices.SPUpdateItem({
       Listname: SPLists.ShelterConfigList,
       ID: shelterId,
       RequestJSON: { IsDelete: true },
+    });
+
+    const shelterBedList = await SpServices.SPReadItems({
+      Listname: SPLists.BedConfigList,
+      Select: "*,Shelter/Id,Shelter/Title",
+      Expand: "Shelter",
+      Filter: [
+        {
+          FilterKey: "IsDelete",
+          Operator: "ne",
+          FilterValue: 1,
+        },
+        {
+          FilterKey: "ShelterId",
+          Operator: "eq",
+          FilterValue: shelterId,
+        },
+      ],
+    });
+
+    shelterBedList.map(async (bed: any) => {
+      await SpServices.SPUpdateItem({
+        Listname: SPLists.BedConfigList,
+        ID: bed?.Id,
+        RequestJSON: { IsDelete: true },
+      });
+    });
+
+    setMasterSheltersList((prev: any) => {
+      let updatedList = [...prev];
+      updatedList = updatedList.filter((item: any) => item.Id !== shelterId);
+      return updatedList;
     });
     setSheltersList((prev: any) => {
       let updatedList = [...prev];
@@ -597,6 +702,7 @@ export const deleteShelterDetails = async (
       return updatedList;
     });
     handleClosePopup(index);
+    setIsLoader(false);
     setToastResponse({
       severity: "success",
       summary: "Sccuess",
@@ -666,7 +772,6 @@ export const fetchUserGroupsAndUsers = async (
     });
     setMasterList(masterList);
     setIsLoading(false);
-    return masterList;
   } catch (err) {
     console.log("Error fetching user groups:", err);
   }
@@ -726,30 +831,44 @@ export const userUpdateSubmission = async (
 
 export const removeUserFunction = async (
   groupId: number,
-  updatedUsers: any[],
+  usersToRemove: any[], // keep as array for flexibility
+  existingUsers: any[], // ✅ pass in the current users of that group
   initFunction: any,
   handleClosePopup: any,
   setToastResponse: any
 ) => {
   try {
-    const userIds = updatedUsers?.map((user) => user?.id || user?.userId);
+    // 1. Collect IDs of users to remove
+    const removeIds = usersToRemove.map((u) => u?.id || u?.userId);
+
+    // 2. Keep all existing users except the ones being removed
+    const updatedUserIds = existingUsers
+      ?.filter((u) => !removeIds.includes(u?.id || u?.userId))
+      ?.map((u) => u?.id || u?.userId);
+
+    // 3. Prepare payload
     const spPayload = {
-      UsersId: { results: userIds },
+      UsersId: { results: updatedUserIds },
     };
+
+    // 4. Update SharePoint list item
     await SpServices.SPUpdateItem({
       Listname: SPLists.UserConfigList,
       ID: groupId,
       RequestJSON: spPayload,
     });
+
+    // 5. Show success
     setToastResponse({
       severity: "success",
-      summary: "Sccuess",
+      summary: "Success",
       detail: "User removed successfully!",
       life: 3000,
     });
+
     handleClosePopup(1);
     initFunction();
   } catch (err) {
-    console.log("Error : ", err);
+    console.error("Error : ", err);
   }
 };

@@ -65,6 +65,7 @@ interface IProps {
   CurrentRole: string;
   setconfigpage: any;
   context: any;
+  checkRoleBasedOnAction: any;
 }
 interface IData {
   id: number | null;
@@ -198,14 +199,25 @@ const Dashboard = (props: IProps): JSX.Element => {
     const _formData = { ...dialog };
     if (key === "files") {
       const _files: Ifile[] = [..._formData.data.files];
+
       for (const item of value) {
-        _files.push({
-          etag: "",
-          name: item.name,
-          url: "",
-          blop: item,
-          type: "New",
-        });
+        const exists = _files.some((f) => f.name === item.name);
+        if (exists) {
+          // alert(`File "${item.name}" already exists!`);
+          props.toastFunc(
+            "warn",
+            "Warning",
+            `File "${item.name}" already exists!`
+          );
+        } else {
+          _files.push({
+            etag: "",
+            name: item.name,
+            url: "",
+            blop: item,
+            type: "New",
+          });
+        }
       }
       _formData.data[`${key}`] = _files;
     } else if (key === "shelter") {
@@ -494,7 +506,12 @@ const Dashboard = (props: IProps): JSX.Element => {
           UserId: props.allUser.filter((e) => e.Email === props.CurrentUser)[0]
             .Id,
           Status:
-            requestData.prevstatus === "Approved" ? "Bed Assigned" : "Closed",
+            requestData.prevstatus === "Rejected by Billing Team" ||
+            requestData.prevstatus === "Rejected by COA"
+              ? "Submitted"
+              : requestData.prevstatus === "Approved"
+              ? "Bed Assigned"
+              : "Closed",
           Comments: "",
         };
         let logResponseId: number | any = null;
@@ -524,6 +541,17 @@ const Dashboard = (props: IProps): JSX.Element => {
         if (
           requestData.prevstatus === "Occupied" &&
           requestData.status === "Closed"
+        ) {
+          await sp.web.lists
+            .getByTitle(SPLists.RequestLogList)
+            .items.add(logData)
+            .then((losResponse) => {
+              logResponseId = losResponse?.data?.Id;
+            });
+        }
+        if (
+          requestData.prevstatus === "Rejected by Billing Team" ||
+          requestData.prevstatus === "Rejected by COA"
         ) {
           await sp.web.lists
             .getByTitle(SPLists.RequestLogList)
@@ -608,7 +636,7 @@ const Dashboard = (props: IProps): JSX.Element => {
             (item) => item.id === requestData.id
           );
           if (isDelete) {
-            return prev.filter((item) => item.ID !== requestData.id);
+            return prev.filter((item) => item.id !== requestData.id);
           }
           if (existingIndex !== -1) {
             const updated = [...prev].map((request) => {
@@ -629,6 +657,24 @@ const Dashboard = (props: IProps): JSX.Element => {
                       : "",
                   });
                 } else {
+                  if (
+                    requestData.prevstatus === "Rejected by Billing Team" ||
+                    requestData.prevstatus === "Rejected by COA"
+                  ) {
+                    tempLog.unshift({
+                      id: logResponseId,
+                      requestId: logData?.RequestIdId,
+                      status: logData?.Status,
+                      role: logData?.Role,
+                      userid: logData?.UserId,
+                      username: props.allUser.filter(
+                        (e) => e.Email === props.CurrentUser
+                      )[0].Title,
+                      comments: requestData.approvercomments
+                        ? requestData.approvercomments
+                        : "",
+                    });
+                  }
                   if (
                     requestData.prevstatus === "Occupied" &&
                     requestData.status === "Closed"
@@ -663,7 +709,7 @@ const Dashboard = (props: IProps): JSX.Element => {
             (item) => item.ID === requestData.id
           );
           if (isDelete) {
-            return prev.filter((item) => item.ID !== requestData.id);
+            return prev.filter((item) => item.id !== requestData.id);
           }
           if (existingIndex !== -1) {
             const updated = [...prev].map((request) => {
@@ -1131,7 +1177,7 @@ const Dashboard = (props: IProps): JSX.Element => {
           <i className="pi pi-times-circle" />
         ) : data.prevstatus === "Approved" || data.status === "Approved" ? (
           <i className="pi pi-check-circle" />
-        ) : data.prevstatus === "Closed" ? (
+        ) : data.prevstatus === "Closed" || data.status === "Closed" ? (
           <i className="pi pi-lock" />
         ) : data.prevstatus === "Occupied" ? (
           <i className="pi pi-users" />
@@ -1267,10 +1313,15 @@ const Dashboard = (props: IProps): JSX.Element => {
                             setdrpdowns({ ..._dropdown });
                           }
                         }
-
                         setdialog({
                           condition: true,
-                          data: item,
+                          data: {
+                            ...item,
+                            status:
+                              item.prevstatus === "Occupied"
+                                ? "Closed"
+                                : item.status,
+                          },
                           type: "edit",
                         });
                       }}
@@ -1280,7 +1331,7 @@ const Dashboard = (props: IProps): JSX.Element => {
                         padding: "4px",
                         borderRadius: "6px",
                         fontSize: "24px",
-                        color: "##b99223",
+                        color: "#b99223",
                         "&:hover": {
                           backgroundColor: "#cbfbbbc2",
                         },
@@ -1331,7 +1382,6 @@ const Dashboard = (props: IProps): JSX.Element => {
                           setdrpdowns({ ..._dropdown });
                         } else if (item.prevstatus === "Approved") {
                           const _dropdown = { ...drpdowns };
-
                           const ShelterDrpDown: any = masterBedData.filter(
                             (e) => e.status === "Available"
                           );
@@ -1352,10 +1402,15 @@ const Dashboard = (props: IProps): JSX.Element => {
                             setdrpdowns({ ..._dropdown });
                           }
                         }
-
                         setdialog({
                           condition: true,
-                          data: item,
+                          data: {
+                            ...item,
+                            status:
+                              item.prevstatus === "Occupied"
+                                ? "Closed"
+                                : item.status,
+                          },
                           type: "edit",
                         });
                       }}
@@ -1507,8 +1562,10 @@ const Dashboard = (props: IProps): JSX.Element => {
     setfilterData([..._filterdata]);
   };
   useEffect(() => {
+    props?.checkRoleBasedOnAction();
     setloader(true);
     fetchBedRequest(
+      props.CurrentRole,
       drpdowns,
       setdrpdowns,
       setmasterData,
@@ -1517,7 +1574,7 @@ const Dashboard = (props: IProps): JSX.Element => {
     );
     fetchBedslogs(setmasterBedLogData);
     fetchBedsDetails(setmasterBedData);
-  }, []);
+  }, [props.CurrentRole]);
 
   const getFileIcon = (name: string) => {
     const extension = name.split(".").pop()?.toLowerCase();
@@ -2089,7 +2146,7 @@ const Dashboard = (props: IProps): JSX.Element => {
               ) : (
                 ""
               )}
-              {dialog.data.prevstatus === "Occupied" &&
+              {/* {dialog.data.prevstatus === "Occupied" &&
                 props.CurrentRole === "Supervisor" && (
                   <div className={styles.fieldssm} style={{ width: "31%" }}>
                     <label className="input-label">Status {asterisk()}</label>
@@ -2107,7 +2164,7 @@ const Dashboard = (props: IProps): JSX.Element => {
                       }
                     />
                   </div>
-                )}
+                )} */}
               <div className={styles.modalFooter}>
                 <CustomButton
                   btnType="cancelBtn"
@@ -2124,25 +2181,36 @@ const Dashboard = (props: IProps): JSX.Element => {
                     </div>
                   )}
                   {dialog.type !== "view" ? (
-                    <CustomButton
-                      btnType="primaryBtn"
-                      text={dialog.type === "add" ? "Save" : "Update"}
-                      // icon="pi pi-check-circle"
-                      onClick={() => requestValidation("Submit")}
-                    />
+                    dialog.data.prevstatus === "Occupied" &&
+                    props.CurrentRole === "Supervisor" ? (
+                      <CustomButton
+                        btnType="primaryBtn"
+                        text="Close request"
+                        onClick={() => {
+                          requestValidation("Submit");
+                        }}
+                      />
+                    ) : (
+                      <CustomButton
+                        btnType="primaryBtn"
+                        text={dialog.type === "add" ? "Save" : "Update"}
+                        // icon="pi pi-check-circle"
+                        onClick={() => requestValidation("Submit")}
+                      />
+                    )
                   ) : (dialog.data.nextlevel === 2 ||
                       dialog.data.nextlevel === 3) &&
                     props.CurrentRole !== "Supervisor" ? (
                     <>
                       <CustomButton
                         btnType="rejectBtn"
-                        text="Rejected"
+                        text="Reject"
                         // icon="pi pi-undo"
                         onClick={() => requestValidation("Rejected")}
                       />
                       <CustomButton
                         btnType="approvebtn"
-                        text="Approved"
+                        text="Approve"
                         // icon="pi pi-verified"
                         onClick={() => requestValidation("Approved")}
                       />
@@ -2163,7 +2231,7 @@ const Dashboard = (props: IProps): JSX.Element => {
                 Are you sure, you want to delete this request ?
               </p>
 
-              <div className={styles.modalFooter}>
+              <div className={styles.confirmationModalFooter}>
                 <CustomButton
                   btnType="cancelBtn"
                   text="No"

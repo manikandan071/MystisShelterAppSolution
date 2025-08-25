@@ -11,15 +11,22 @@ import BedConfig from "./BedConfig/BedConfig";
 import Tooltip from "@mui/material/Tooltip";
 import "../../assets/css/DataTable.css";
 import UserConfig from "./UserConfig/UserConfig";
+import { useEffect } from "react";
 interface IProps {
   setconfigpage: any;
   context: any;
+  CurrentRole: string;
+  checkRoleBasedOnAction: any;
 }
 
 const ConfigurationScreen = (props: IProps) => {
   const [activeTab, setActiveTab] = React.useState<"bed" | "shelter" | "users">(
     "users"
   );
+
+  useEffect(() => {
+    props.checkRoleBasedOnAction();
+  }, [props.CurrentRole]);
 
   return (
     <div className={styles.container}>

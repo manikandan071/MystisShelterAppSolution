@@ -99,7 +99,6 @@ const ShelterConfig: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<any>({
     SearchValue: "",
   });
-
   const [toastResponse, setToastResponse] = useState<any>({
     severity: "",
     summary: "",
@@ -188,13 +187,17 @@ const ShelterConfig: React.FC = () => {
               marginBottom: "10px",
             }}
           >
-            <CustomButton
-              btnType="primaryBtn"
-              icon="pi pi-plus"
-              onClick={addNewRow}
-              text="Shelter"
-              disabled={getFirstInvalidErrorMsg(newSheltersList) ? true : false}
-            />
+            {isUpdateDetails?.Type === "new" && (
+              <CustomButton
+                btnType="primaryBtn"
+                icon="pi pi-plus"
+                onClick={addNewRow}
+                text="Shelter"
+                disabled={
+                  getFirstInvalidErrorMsg(newSheltersList) ? true : false
+                }
+              />
+            )}
           </div>
           <div
             style={{
@@ -319,24 +322,44 @@ const ShelterConfig: React.FC = () => {
                     isValid={shelter?.ShelterDescription?.isValid}
                   />
                   <div style={{ alignSelf: "center" }}>
-                    {newSheltersList.length > 1 && (
-                      <DeleteIcon
-                        onClick={() =>
-                          removeRow(shelter?.ShelterName?.Id, index)
-                        }
-                        sx={{
-                          cursor: "pointer",
-                          backgroundColor: "#ffebee",
-                          padding: "4px",
-                          borderRadius: "6px",
-                          fontSize: "24px",
-                          color: "#f44336",
-                          "&:hover": {
-                            backgroundColor: "#ffcdd2",
-                          },
-                        }}
-                      />
-                    )}
+                    {newSheltersList.length > 1 &&
+                      (getFirstInvalidErrorMsg(newSheltersList) ? (
+                        !shelter?.ShelterName?.isValid && (
+                          <DeleteIcon
+                            onClick={() =>
+                              removeRow(shelter?.ShelterName?.Id, index)
+                            }
+                            sx={{
+                              cursor: "pointer",
+                              backgroundColor: "#ffebee",
+                              padding: "4px",
+                              borderRadius: "6px",
+                              fontSize: "24px",
+                              color: "#f44336",
+                              "&:hover": {
+                                backgroundColor: "#ffcdd2",
+                              },
+                            }}
+                          />
+                        )
+                      ) : (
+                        <DeleteIcon
+                          onClick={() =>
+                            removeRow(shelter?.ShelterName?.Id, index)
+                          }
+                          sx={{
+                            cursor: "pointer",
+                            backgroundColor: "#ffebee",
+                            padding: "4px",
+                            borderRadius: "6px",
+                            fontSize: "24px",
+                            color: "#f44336",
+                            "&:hover": {
+                              backgroundColor: "#ffcdd2",
+                            },
+                          }}
+                        />
+                      ))}
                   </div>
                 </div>
               );
@@ -366,6 +389,7 @@ const ShelterConfig: React.FC = () => {
     if (isFormValid && isUpdateDetails?.Type === "update") {
       // setPopupResponseFun(setPopupResponse, 0, true, "", "");
       updateSheltersDetails(
+        setIsLoader,
         formDetails,
         deletedBedsList,
         setMasterSheltersList,
@@ -377,6 +401,7 @@ const ShelterConfig: React.FC = () => {
       );
     } else if (isFormValid) {
       submitSheltersDetails(
+        setIsLoader,
         formDetails,
         setMasterSheltersList,
         setSheltersList,
@@ -428,7 +453,7 @@ const ShelterConfig: React.FC = () => {
     [
       {
         text: "No",
-        btnType: "cancelBtn",
+        btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
         onClick: () => {
@@ -448,7 +473,9 @@ const ShelterConfig: React.FC = () => {
         onClick: () => {
           if (isUpdateDetails?.Type === "delete") {
             deleteShelterDetails(
+              setIsLoader,
               isUpdateDetails?.Id,
+              setMasterSheltersList,
               setSheltersList,
               handleClosePopup,
               setToastResponse,
@@ -463,6 +490,20 @@ const ShelterConfig: React.FC = () => {
   const openAddFormPopup = () => {
     setIsUpdateDetails({ Id: null, Type: "new", isLoading: false });
     setFormDetails(deepClone(cloneFormDetails));
+    setNewSheltersList([
+      {
+        ShelterName: {
+          value: "",
+          isValid: true,
+          isMandatory: true,
+        },
+        ShelterDescription: {
+          value: "",
+          isValid: true,
+          isMandatory: false,
+        },
+      },
+    ]);
     togglePopupVisibility(setPopupController, 0, "open", `Add Shelters`);
   };
 
@@ -539,34 +580,36 @@ const ShelterConfig: React.FC = () => {
             }}
           />
         </Tooltip>
-        <Tooltip title="Delete">
-          <DeleteIcon
-            onClick={() => {
-              setIsUpdateDetails({
-                Id: rowData?.Id,
-                Type: "delete",
-                isLoading: false,
-              });
-              togglePopupVisibility(
-                setPopupController,
-                1,
-                "open",
-                `Confirmation`
-              );
-            }}
-            sx={{
-              cursor: "pointer",
-              backgroundColor: "#ffebee",
-              padding: "4px",
-              borderRadius: "6px",
-              fontSize: "24px",
-              color: "#f44336",
-              "&:hover": {
-                backgroundColor: "#ffcdd2",
-              },
-            }}
-          />
-        </Tooltip>
+        {!rowData?.isPermission && (
+          <Tooltip title="Delete">
+            <DeleteIcon
+              onClick={() => {
+                setIsUpdateDetails({
+                  Id: rowData?.Id,
+                  Type: "delete",
+                  isLoading: false,
+                });
+                togglePopupVisibility(
+                  setPopupController,
+                  1,
+                  "open",
+                  `Confirmation`
+                );
+              }}
+              sx={{
+                cursor: "pointer",
+                backgroundColor: "#ffebee",
+                padding: "4px",
+                borderRadius: "6px",
+                fontSize: "24px",
+                color: "#f44336",
+                "&:hover": {
+                  backgroundColor: "#ffcdd2",
+                },
+              }}
+            />
+          </Tooltip>
+        )}
       </div>
     );
   };
