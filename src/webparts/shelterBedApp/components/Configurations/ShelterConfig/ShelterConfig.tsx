@@ -243,7 +243,7 @@ const ShelterConfig: React.FC = () => {
                     </span>
                     <CustomInputBox
                       value={shelter?.ShelterName?.value}
-                      placeholder="Enter Text"
+                      placeholder="Enter here"
                       labelText=""
                       // labelText={`Bed ${index + 1}`}
                       // onChange={(value: any) => {
@@ -416,7 +416,7 @@ const ShelterConfig: React.FC = () => {
     [
       {
         text: "Cancel",
-        btnType: "cancelBtn",
+        btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
         onClick: () => {

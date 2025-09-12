@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import * as React from "react";
 const logo = require("../../assets/images/mystis_logo_image.jpg");
 import styles from "./NoRoleScreen.module.scss";

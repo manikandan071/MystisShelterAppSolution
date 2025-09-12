@@ -33,6 +33,21 @@ interface IProps {
   context: any;
 }
 
+type IUser = {
+  userId: number | null;
+  userEmail: string | null;
+  userName: string | null;
+  sNo?: number;
+  [key: string]: any;
+};
+
+type IGroup = {
+  groupId: number;
+  users: IUser[];
+};
+
+const emptyGroup = (): IGroup => ({ groupId: 0, users: [] });
+
 const UserConfig = (props: IProps) => {
   const popupMultiPeoplePickerStyle = {
     root: {
@@ -52,31 +67,17 @@ const UserConfig = (props: IProps) => {
         height: "30px",
         alignSelf: "start",
       },
-      ".ms-BasePicker-input::placeholder": {
-        // fontFamily: "interMedium",
-      },
-      ".ms-BasePicker-text:after": {
-        display: "none",
-      },
-      ".ms-BasePicker-text:hover": {
-        border: "1px solid #b99223",
-      },
-      ".ms-TooltipHost": {
-        // fontFamily: "interMedium",
-        fontSize: "13px",
-        color: "#414141",
-      },
+      ".ms-BasePicker-input::placeholder": {},
+      ".ms-BasePicker-text:after": { display: "none" },
+      ".ms-BasePicker-text:hover": { border: "1px solid #b99223" },
+      ".ms-TooltipHost": { fontSize: "13px", color: "#414141" },
       ".ms-PickerPersona-container": {
         background: "#e8e8e8",
         maxWidth: "auto",
         minWidth: "auto",
       },
-      ".ms-PickerItem-removeButton": {
-        display: "block",
-      },
-      ".ms-PickerItem-removeButton:focus": {
-        background: "#555",
-      },
+      ".ms-PickerItem-removeButton": { display: "block" },
+      ".ms-PickerItem-removeButton:focus": { background: "#555" },
       ".ms-BasePicker-itemsWrapper": {
         height: "100%",
         alignItems: "center",
@@ -105,110 +106,399 @@ const UserConfig = (props: IProps) => {
       popupData: "",
     },
   ];
+
   const [popupController, setPopupController] = useState(
     initialPopupController
   );
-  const handleClosePopup = (index?: any): void => {
+  const handleClosePopup = (index: number) =>
     togglePopupVisibility(setPopupController, index, "close");
-  };
+
   const [toastResponse, setToastResponse] = useState<any>({
     severity: "",
     summary: "",
     detail: "",
     life: 3000,
   });
+
+  // active tab and group id
   const [activeGroupTab, setActiveGroupTab] = useState<
-    "supervisor" | "billing" | "approver" | ""
-  >("");
+    "supervisor" | "billing" | "approver"
+  >("supervisor");
   const [activeGroupID, setActiveGroupID] = useState<number | null>(null);
 
+  // Form details for add/delete
   const [formDetails, setFormDetails] = useState<any>({
-    Id: 0,
+    Id: null,
     Users: [],
+    isValid: true,
+    errorMessage: "",
   });
+
   const [searchValue, setSearchValue] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [masterList, setMasterList] = useState<any>();
-  const [supervisorList, setSupervisorList] = useState<any>([]);
-  const [billingteamList, setBillingteamList] = useState<any>([]);
-  const [approverList, setApproverList] = useState<any>([]);
 
+  // originalLists keeps the immutable source data per group (from server)
+  const [originalLists, setOriginalLists] = useState<{
+    supervisor: IGroup;
+    billing: IGroup;
+    approver: IGroup;
+  }>({
+    supervisor: emptyGroup(),
+    billing: emptyGroup(),
+    approver: emptyGroup(),
+  });
+
+  // displayLists is what the UI shows (after search/filter). It is derived from originalLists and never replaces originalLists.
+  const [displayLists, setDisplayLists] = useState<{
+    supervisor: IGroup;
+    billing: IGroup;
+    approver: IGroup;
+  }>({
+    supervisor: emptyGroup(),
+    billing: emptyGroup(),
+    approver: emptyGroup(),
+  });
+  console.log(originalLists, displayLists);
+
+  // ----- Helpers -----
+  const normalizeUser = (u: any): IUser => {
+    if (!u) return { userId: null, userEmail: null, userName: null };
+    const userId =
+      u.userId ?? u.UserId ?? u.ID ?? u.Id ?? u.IdNumber ?? u.id ?? null;
+    const userEmail =
+      u.userEmail ??
+      u.Email ??
+      u.email ??
+      u.Mail ??
+      u.login ??
+      u.userPrincipalName ??
+      null;
+    const userName =
+      u.userName ??
+      u.Title ??
+      u.TitleName ??
+      u.displayName ??
+      u.name ??
+      u.Text ??
+      u.text ??
+      null;
+    return {
+      userId: userId ?? null,
+      userEmail: userEmail ?? null,
+      userName: userName ?? null,
+    };
+  };
+
+  const addSno = (users: IUser[]) =>
+    users.map((u, idx) => ({ ...u, sNo: idx + 1 }));
+
+  function normalizeGroupShape(raw: any): IGroup {
+    if (!raw) return emptyGroup();
+
+    // if already normalized
+    if (raw.groupId !== undefined && raw.users) {
+      const users = Array.isArray(raw.users)
+        ? raw.users.map(normalizeUser)
+        : [];
+      // don't trust 0, only set if > 0
+      const gid = raw.groupId && raw.groupId > 0 ? raw.groupId : null;
+      return { groupId: gid, users };
+    }
+
+    // if array of users
+    if (Array.isArray(raw)) {
+      return { groupId: 0, users: raw.map(normalizeUser) };
+    }
+
+    // object with users or arrays
+    const usersArr =
+      raw.users ?? raw.userList ?? raw.usersList ?? raw.Items ?? [];
+    let gid =
+      raw.groupId ?? raw.groupID ?? raw.GroupId ?? raw.ID ?? raw.Id ?? null;
+
+    // fix: treat 0 as invalid
+    gid = gid && gid > 0 ? gid : null;
+
+    const users = Array.isArray(usersArr) ? usersArr.map(normalizeUser) : [];
+    return { groupId: gid, users };
+  }
+
+  // ----- Init / Fetch -----
   const initFunction = async () => {
     setSearchValue("");
+    setIsLoading(true);
+
+    // We pass callbacks the same way your existing service expects (it appears to accept setter callbacks).
+    // Each callback we provide will normalize the incoming payload into our originalLists & displayLists.
     fetchUserGroupsAndUsers(
-      setSupervisorList,
-      setBillingteamList,
-      setApproverList,
-      setMasterList,
+      (sup: any) => {
+        console.log("sup", sup);
+
+        const ng = normalizeGroupShape(sup);
+        console.log("ng", ng);
+        setOriginalLists((prev) => ({ ...prev, supervisor: ng }));
+        setDisplayLists((prev) => ({
+          ...prev,
+          supervisor: { ...ng, users: addSno(ng.users), groupId: ng.groupId },
+        }));
+        if (!activeGroupID && ng.groupId) setActiveGroupID(ng.groupId);
+      },
+      (bill: any) => {
+        const ng = normalizeGroupShape(bill);
+        setOriginalLists((prev) => ({ ...prev, billing: ng }));
+        setDisplayLists((prev) => ({
+          ...prev,
+          billing: { ...ng, users: addSno(ng.users), groupId: ng.groupId },
+        }));
+      },
+      (app: any) => {
+        const ng = normalizeGroupShape(app);
+        setOriginalLists((prev) => ({ ...prev, approver: ng }));
+        setDisplayLists((prev) => ({
+          ...prev,
+          approver: { ...ng, users: addSno(ng.users), groupId: ng.groupId },
+        }));
+      },
+      (master: any) => {
+        // some implementations return a master object with keys; support that too
+        if (master) {
+          const sup = normalizeGroupShape(
+            master.supervisorList ??
+              master.supervisor ??
+              master.supervisorListData ??
+              []
+          );
+          const bill = normalizeGroupShape(
+            master.billingTeamList ??
+              master.billing ??
+              master.billingTeamListData ??
+              []
+          );
+          const app = normalizeGroupShape(
+            master.approverList ??
+              master.approver ??
+              master.approverListData ??
+              []
+          );
+          setOriginalLists({ supervisor: sup, billing: bill, approver: app });
+          setDisplayLists({
+            supervisor: { ...sup, users: addSno(sup.users) },
+            billing: { ...bill, users: addSno(bill.users) },
+            approver: { ...app, users: addSno(app.users) },
+          });
+          if (!activeGroupID && sup.groupId) setActiveGroupID(sup.groupId);
+        }
+      },
       setIsLoading
-    );
-    setActiveGroupTab(activeGroupTab === "" ? "supervisor" : activeGroupTab);
-    setActiveGroupID(
-      activeGroupTab === ""
-        ? 1
-        : activeGroupTab === "supervisor"
-        ? supervisorList?.groupId
-        : activeGroupTab === "billing"
-        ? billingteamList?.groupId
-        : approverList?.groupId
     );
   };
 
   useEffect(() => {
     initFunction();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openAddFormPopup = () => {
-    setFormDetails({
-      Id:
-        activeGroupTab === "supervisor"
-          ? supervisorList?.groupId
-          : activeGroupTab === "billing"
-          ? billingteamList?.groupId
-          : approverList?.groupId,
-      Users: [],
-    });
-    togglePopupVisibility(setPopupController, 0, "open", `Add Users`);
-  };
-  const handleChange = async (items: any[]): Promise<void> => {
-    // Get users from active group
-    const tempUserList =
-      activeGroupTab === "supervisor"
-        ? masterList?.supervisorList
-        : activeGroupTab === "billing"
-        ? masterList?.billingTeamList
-        : masterList?.approverList;
+  // Utility to get keys based on activeGroupTab
+  const groupKeyForTab = (tab: "supervisor" | "billing" | "approver") =>
+    tab === "supervisor"
+      ? "supervisor"
+      : tab === "billing"
+      ? "billing"
+      : "approver";
 
-    const resolvedUsers = await Promise.all(
-      items.map(async (item: any) => {
-        const email = item?.secondaryText;
-        const user = await sp.web.ensureUser(email); // This returns user.Id (numeric)
-        return {
-          id: user?.data?.Id,
-          email,
-          name: item?.text,
-        };
+  // ----- PeoplePicker change handler (Add users) -----
+  const handleChange = async (items: any[]): Promise<void> => {
+    // resolve selected users to normalized shape
+    const resolvedUsers: IUser[] = await Promise.all(
+      (items || []).map(async (item: any) => {
+        // PeoplePicker item shape varies; try to get an email/login
+        const email =
+          item?.secondaryText ??
+          item?.login ??
+          item?.id ??
+          item?.key ??
+          item?.text ??
+          null;
+        try {
+          const ensured = email ? await sp.web.ensureUser(email) : null;
+          const id = ensured?.data?.Id ?? ensured?.data?.Id ?? null;
+          return normalizeUser({
+            userId: id,
+            userEmail: email,
+            userName: item?.text ?? item?.title ?? item?.name,
+          });
+        } catch (e) {
+          // fallback — still include the entry with null id if ensureUser failed
+          return normalizeUser({
+            userId: null,
+            userEmail: email,
+            userName: item?.text ?? item?.title ?? item?.name,
+          });
+        }
       })
     );
-    const duplicateUsers = resolvedUsers?.filter((item) =>
-      tempUserList?.some(
-        (u: any) => u.userId === item.id || u.userEmail === item.email
+
+    const key = groupKeyForTab(activeGroupTab);
+    const base = originalLists[key] ?? emptyGroup();
+
+    // duplicate check comparing by userId (if present) or email
+    const duplicateUsers = resolvedUsers.filter((r) =>
+      base.users.some(
+        (u) =>
+          (u.userId && r.userId && u.userId === r.userId) ||
+          (u.userEmail &&
+            r.userEmail &&
+            u.userEmail.toLowerCase() === (r.userEmail || "").toLowerCase())
       )
     );
-
-    const errorMessage = duplicateUsers.map((u) => u.name).join(", ");
+    const errorMessage = duplicateUsers
+      .map((d) => d.userName ?? d.userEmail ?? "")
+      .join(", ");
 
     setFormDetails((prev: any) => ({
       ...prev,
       Users: resolvedUsers,
       isValid: duplicateUsers.length === 0,
-      errorMessage:
-        duplicateUsers.length > 0
-          ? `${errorMessage} already exists in this group`
-          : "",
+      errorMessage: duplicateUsers.length
+        ? `${errorMessage} already exists in this group`
+        : "",
     }));
   };
 
+  // ----- Open add popup -----
+  const openAddFormPopup = () => {
+    const key = groupKeyForTab(activeGroupTab);
+    const current = originalLists[key] ?? emptyGroup();
+    setFormDetails({
+      Id: current.groupId,
+      Users: [],
+      isValid: true,
+      errorMessage: "",
+    });
+    togglePopupVisibility(setPopupController, 0, "open", `Add Users`);
+  };
+
+  // ----- Submit add users -----
+  const submitAddUsersForm = async () => {
+    const key = groupKeyForTab(activeGroupTab);
+    const current = originalLists[key] ?? emptyGroup();
+
+    const existingUsersCopy = (current.users || []).map((u: IUser) => ({
+      ...u,
+    }));
+    const newUsersCopy = (formDetails?.Users || []).map((u: IUser) => ({
+      ...u,
+    }));
+
+    // call service with copies only — do not pass our state references
+    try {
+      // preserve the old callback pattern — userUpdateSubmission may expect callbacks
+      const groupIdToUse = formDetails?.Id ?? current.groupId ?? null;
+      userUpdateSubmission(
+        groupIdToUse,
+        existingUsersCopy,
+        newUsersCopy,
+        () => {
+          // success callback: refresh data and close popup
+          initFunction();
+          handleClosePopup(0);
+        },
+        handleClosePopup,
+        setToastResponse
+      );
+    } catch (err) {
+      // best-effort: show toast
+      setToastResponse({
+        severity: "error",
+        summary: "Add failed",
+        detail: String(err),
+        life: 3000,
+      });
+    }
+  };
+
+  // ----- Remove user flow -----
+  const removeUserFromGroup = (userId: number | null) => {
+    const key = groupKeyForTab(activeGroupTab);
+    const current = originalLists[key] ?? emptyGroup();
+    const userToRemove =
+      current.users.find((u) => u.userId === userId) ??
+      current.users.find(
+        (u) =>
+          u.userEmail &&
+          String(u.userEmail).toLowerCase() === String(userId).toLowerCase()
+      );
+
+    setFormDetails({
+      Id: current.groupId,
+      Users: userToRemove ? [userToRemove] : [],
+      isValid: true,
+      errorMessage: "",
+    });
+    togglePopupVisibility(setPopupController, 1, "open", `Confirmation`);
+  };
+
+  const confirmDelete = async () => {
+    debugger;
+    const key = groupKeyForTab(activeGroupTab);
+    const current = originalLists[key] ?? emptyGroup();
+    const usersToDelete = (formDetails?.Users || []).map((u: IUser) => ({
+      ...u,
+    }));
+
+    try {
+      removeUserFunction(
+        current.groupId,
+        usersToDelete,
+        (current.users || []).map((u) => ({ ...u })),
+        () => {
+          // on success: refresh lists and close confirmation
+          initFunction();
+          handleClosePopup(1);
+        },
+        handleClosePopup,
+        setToastResponse
+      );
+    } catch (err) {
+      setToastResponse({
+        severity: "error",
+        summary: "Delete failed",
+        detail: String(err),
+        life: 3000,
+      });
+    }
+  };
+
+  // ----- Search — only affects displayLists (never mutate originalLists) -----
+  const searchAndFilter = (value: string) => {
+    setSearchValue(value);
+    const key = groupKeyForTab(activeGroupTab);
+    const base = originalLists[key] ?? emptyGroup();
+
+    if (!value || value.trim() === "") {
+      setDisplayLists((prev) => ({
+        ...prev,
+        [key]: { ...base, users: addSno(base.users) },
+      }));
+      return;
+    }
+
+    const filtered = base.users.filter((u) =>
+      (u.userName ?? "").toString().toLowerCase().includes(value.toLowerCase())
+    );
+    setDisplayLists((prev) => ({
+      ...prev,
+      [key]: { ...base, users: addSno(filtered) },
+    }));
+  };
+
+  // ----- UI rendering helpers -----
+  const getDisplayedUsers = () => {
+    const key = groupKeyForTab(activeGroupTab);
+    return displayLists[key]?.users ?? [];
+  };
+
+  // Popup inputs & actions
   const popupInputs: any[] = [
     [
       <div key={1} style={{ width: "100%" }}>
@@ -221,18 +511,16 @@ const UserConfig = (props: IProps) => {
           styles={popupMultiPeoplePickerStyle}
           context={props?.context}
           webAbsoluteUrl={props?.context?._pageContext?._site?.absoluteUrl}
-          // titleText="Select Users"
-          placeholder="Enter text"
+          placeholder="Enter here"
           personSelectionLimit={5}
           showtooltip={false}
           ensureUser={true}
           defaultSelectedUsers={
-            formDetails?.Users?.map(
+            (formDetails?.Users || []).map(
               (item: any) => item.userEmail || item.Email || item.email
             ) || []
           }
           onChange={handleChange}
-          // resolveDelay={1000}
           principalTypes={[PrincipalType.User]}
         />
       </div>,
@@ -245,41 +533,22 @@ const UserConfig = (props: IProps) => {
       </div>,
     ],
   ];
-  const submitAddUsersForm = () => {
-    const existingUsers =
-      activeGroupTab === "supervisor"
-        ? masterList?.supervisorList
-        : activeGroupTab === "billing"
-        ? masterList?.billingTeamList
-        : masterList?.approverList;
-    userUpdateSubmission(
-      formDetails?.Id,
-      existingUsers,
-      formDetails?.Users,
-      initFunction,
-      handleClosePopup,
-      setToastResponse
-    );
-  };
+
   const popupActions: any[] = [
     [
       {
         text: "Cancel",
-        btnType: "cancelBtn",
+        btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
-        onClick: () => {
-          handleClosePopup(0);
-        },
+        onClick: () => handleClosePopup(0),
       },
       {
         text: "Submit",
         btnType: "primaryBtn",
         startIcon: "pi pi-check-circle",
-        disabled: !formDetails?.isValid ? true : false,
-        onClick: () => {
-          submitAddUsersForm();
-        },
+        disabled: !formDetails?.isValid,
+        onClick: submitAddUsersForm,
       },
     ],
     [
@@ -288,95 +557,48 @@ const UserConfig = (props: IProps) => {
         btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
-        onClick: () => {
-          handleClosePopup(1);
-        },
+        onClick: () => handleClosePopup(1),
       },
       {
         text: "Yes",
         btnType: "primaryBtn",
         disabled: false,
         startIcon: "pi pi-check-circle",
-        onClick: () => {
-          removeUserFunction(
-            formDetails?.Id,
-            formDetails?.Users,
-            activeGroupTab === "supervisor"
-              ? masterList?.supervisorList
-              : activeGroupTab === "billing"
-              ? masterList?.billingTeamList
-              : masterList?.approverList,
-            initFunction,
-            handleClosePopup,
-            setToastResponse
-          );
-        },
+        onClick: confirmDelete,
       },
     ],
   ];
 
-  const removeUserFromGroup = (userId: number, groupId: number | null) => {
-    const userToRemove = (
-      activeGroupTab === "supervisor"
-        ? supervisorList?.users
-        : activeGroupTab === "billing"
-        ? billingteamList?.users
-        : approverList?.users
-    )?.find((user: any) => user?.userId === userId);
-    setFormDetails({
-      Id: groupId,
-      Users: [userToRemove],
-    });
-    togglePopupVisibility(setPopupController, 1, "open", `Confirmation`);
-  };
+  const actionBodyTemplate = (rowData: IUser) => (
+    <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+      <Tooltip title="Delete">
+        <DeleteIcon
+          onClick={() => removeUserFromGroup(rowData?.userId ?? null)}
+          sx={{
+            cursor: "pointer",
+            backgroundColor: "#ffebee",
+            padding: "4px",
+            borderRadius: "6px",
+            fontSize: "24px",
+            color: "#f44336",
+            "&:hover": { backgroundColor: "#ffcdd2" },
+          }}
+        />
+      </Tooltip>
+    </div>
+  );
 
-  const actionBoadyTemplate = (rowData: any) => {
-    return (
-      <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-        <Tooltip title="Delete">
-          <DeleteIcon
-            onClick={() => {
-              removeUserFromGroup(rowData?.userId, activeGroupID);
-            }}
-            sx={{
-              cursor: "pointer",
-              backgroundColor: "#ffebee",
-              padding: "4px",
-              borderRadius: "6px",
-              fontSize: "24px",
-              color: "#f44336",
-              "&:hover": {
-                backgroundColor: "#ffcdd2",
-              },
-            }}
-          />
-        </Tooltip>
-      </div>
-    );
-  };
-
-  const searchAndFilter = (value: string) => {
-    setSearchValue(value);
-    const key = activeGroupTab;
-
-    const fullList =
-      key === "supervisor"
-        ? masterList?.supervisorList
-        : key === "billing"
-        ? masterList?.billingTeamList
-        : masterList?.approverList;
-
-    const filtered = fullList.filter((user: any) =>
-      user?.userName?.toLowerCase().includes(value?.toLowerCase())
-    );
-
-    if (key === "supervisor") {
-      setSupervisorList({ ...supervisorList, users: filtered });
-    } else if (key === "billing") {
-      setBillingteamList({ ...billingteamList, users: filtered });
-    } else {
-      setApproverList({ ...approverList, users: filtered });
-    }
+  // Tab click handler to reset display list from original
+  const onTabClick = (tab: "supervisor" | "billing" | "approver") => {
+    setActiveGroupTab(tab);
+    const key = groupKeyForTab(tab);
+    const base = originalLists[key] ?? emptyGroup();
+    setActiveGroupID(base.groupId ?? null);
+    setSearchValue("");
+    setDisplayLists((prev) => ({
+      ...prev,
+      [key]: { ...base, users: addSno(base.users) },
+    }));
   };
 
   return (
@@ -385,6 +607,7 @@ const UserConfig = (props: IProps) => {
         toastResponse={toastResponse}
         setToastResponse={setToastResponse}
       />
+
       <div style={{ display: "flex", justifyContent: "center" }}>
         <div className={styles.tab_container}>
           <button
@@ -393,14 +616,7 @@ const UserConfig = (props: IProps) => {
                 ? styles.activeTabBtn
                 : styles.tabBtn
             }`}
-            onClick={() => {
-              setActiveGroupTab("supervisor");
-              setActiveGroupID(1);
-              setSearchValue("");
-              setSupervisorList((prev: any) => {
-                return { ...prev, users: masterList.supervisorList };
-              });
-            }}
+            onClick={() => onTabClick("supervisor")}
             aria-pressed={activeGroupTab === "supervisor"}
             style={{ borderRadius: "3px" }}
           >
@@ -410,18 +626,9 @@ const UserConfig = (props: IProps) => {
             className={`${
               activeGroupTab === "billing" ? styles.activeTabBtn : styles.tabBtn
             }`}
-            onClick={() => {
-              setActiveGroupTab("billing");
-              setActiveGroupID(2);
-              setSearchValue("");
-              setBillingteamList((prev: any) => {
-                return { ...prev, users: masterList.billingTeamList };
-              });
-            }}
+            onClick={() => onTabClick("billing")}
             aria-pressed={activeGroupTab === "billing"}
-            style={{
-              borderRadius: "3px",
-            }}
+            style={{ borderRadius: "3px" }}
           >
             Billing Team
           </button>
@@ -431,14 +638,7 @@ const UserConfig = (props: IProps) => {
                 ? styles.activeTabBtn
                 : styles.tabBtn
             }`}
-            onClick={() => {
-              setActiveGroupTab("approver");
-              setActiveGroupID(3);
-              setSearchValue("");
-              setApproverList((prev: any) => {
-                return { ...prev, users: masterList.approverList };
-              });
-            }}
+            onClick={() => onTabClick("approver")}
             aria-pressed={activeGroupTab === "approver"}
             style={{ borderRadius: "3px" }}
           >
@@ -446,61 +646,40 @@ const UserConfig = (props: IProps) => {
           </button>
         </div>
       </div>
+
       <div className={styles.dashboardHeader}>
-        {/* <span className={styles.heading}>Users Details</span> */}
         <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
           <CustomSearchInput
             width="330px"
             value={searchValue}
             placeholder="Search"
             disabled={isLoading}
-            onChange={(value: string) => {
-              searchAndFilter(value);
-            }}
+            onChange={(v: string) => searchAndFilter(v)}
           />
           <CustomButton
             btnType="primaryBtn"
-            // icon="pi pi-plus"
             onClick={openAddFormPopup}
             text="Add User"
           />
         </div>
       </div>
+
       <div className="custom-data-table">
         <DataTable
-          value={
-            activeGroupTab === "supervisor"
-              ? supervisorList?.users
-              : activeGroupTab === "billing"
-              ? billingteamList?.users
-              : approverList?.users
-          }
-          className="min_height_55vh"
+          value={getDisplayedUsers()}
+          className="min_height_59vh"
           scrollable
-          scrollHeight="55vh"
+          scrollHeight="59vh"
           style={{ minWidth: "100%", minHeight: "30Vh", maxHeight: "65vh" }}
           key={0}
-          paginator={
-            (activeGroupTab === "supervisor"
-              ? supervisorList?.users?.length
-              : activeGroupTab === "billing"
-              ? billingteamList?.users?.length
-              : approverList?.users?.length) > 10
-          }
+          paginator={(getDisplayedUsers() || []).length > 10}
           rows={9}
           paginatorTemplate="CurrentPageReport FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
           currentPageReportTemplate={`Showing {first} to {last} of {totalRecords} ${
-            (activeGroupTab === "supervisor"
-              ? supervisorList?.users?.length
-              : activeGroupTab === "billing"
-              ? billingteamList?.users?.length
-              : approverList?.users?.length) === 1
-              ? "record"
-              : "records"
+            (getDisplayedUsers() || []).length === 1 ? "record" : "records"
           }`}
-          //   emptyMessage="No data found."
-          emptyMessage={() => {
-            return isLoading ? (
+          emptyMessage={() =>
+            isLoading ? (
               <div
                 style={{
                   width: "100%",
@@ -519,54 +698,72 @@ const UserConfig = (props: IProps) => {
               </div>
             ) : (
               <div style={{ padding: "10px" }}>No Data Found</div>
-            );
-          }}
+            )
+          }
         >
           <Column
-            field="userId"
+            field="sNo"
             header="S No"
             style={{ width: "10%" }}
-            body={(rowData) => (
-              <OnTextRender text={rowData?.sNo} isBold={true} />
+            body={(rowData: IUser) => (
+              <OnTextRender
+                text={rowData?.sNo !== undefined ? String(rowData.sNo) : ""}
+                isBold={true}
+              />
             )}
           />
           <Column
             field="userName"
             header="User Name"
             style={{ width: "30%" }}
-            body={(rowData) => (
-              <OnTextRender text={rowData?.userName} isBold={false} />
+            body={(rowData: IUser) => (
+              <OnTextRender
+                text={
+                  rowData?.userName !== undefined
+                    ? String(rowData.userName)
+                    : ""
+                }
+                isBold={false}
+              />
             )}
           />
           <Column
             field="userEmail"
             header="User Email"
             style={{ width: "40%" }}
-            body={(rowData) => <OnTextRender text={rowData?.userEmail} />}
+            body={(rowData: IUser) => (
+              <OnTextRender
+                text={
+                  rowData?.userEmail !== undefined
+                    ? String(rowData.userEmail)
+                    : ""
+                }
+              />
+            )}
           />
           <Column
-            field="sNo"
+            field="action"
             header="Action"
             style={{ width: "20%" }}
-            body={actionBoadyTemplate}
+            body={actionBodyTemplate}
           />
         </DataTable>
       </div>
+
       {popupController?.map((popupData: any, index: number) => (
         <Popup
           key={index}
           isLoading={false}
           PopupType={popupData.popupType}
-          onHide={() => {
-            togglePopupVisibility(setPopupController, index, "close");
-          }}
+          onHide={() =>
+            togglePopupVisibility(setPopupController, index, "close")
+          }
           popupTitle={
             popupData.popupType !== "confimation" && popupData.popupTitle
           }
           popupActions={popupActions[index]}
           visibility={popupData.open}
           content={popupInputs[index]}
-          // response={popupResponse[index]}
           popupWidth={popupData.popupWidth}
           defaultCloseBtn={popupData.defaultCloseBtn || false}
           confirmationTitle={

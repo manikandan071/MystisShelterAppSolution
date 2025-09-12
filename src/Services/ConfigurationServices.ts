@@ -732,9 +732,9 @@ export const fetchUserGroupsAndUsers = async (
     // const billingTeamList: any[] = [];
     // const approversList: any[] = [];
     const masterList = {
-      supervisorList: [],
-      billingTeamList: [],
-      approverList: [],
+      supervisorList: {},
+      billingTeamList: {},
+      approverList: {},
     };
 
     groupsResponse?.forEach((group) => {
@@ -756,15 +756,15 @@ export const fetchUserGroupsAndUsers = async (
       switch (group?.Role) {
         case "Supervisor":
           setSupervisorList(groupData);
-          masterList.supervisorList = formattedUsers;
+          masterList.supervisorList = groupData;
           break;
         case "Billing Team":
           setBillingteamList(groupData);
-          masterList.billingTeamList = formattedUsers;
+          masterList.billingTeamList = groupData;
           break;
         case "Chief of Approval":
           setApproverList(groupData);
-          masterList.approverList = formattedUsers;
+          masterList.approverList = groupData;
           break;
         default:
           break;

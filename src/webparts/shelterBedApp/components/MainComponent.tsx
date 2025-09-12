@@ -32,6 +32,7 @@ const MainComponent: any = (props: any) => {
   const [users, setUsers] = useState<Iuser[]>([]);
   const CurrentUser = props?.context?._pageContext?._user?.email;
   const [configpage, setconfigpage] = useState<boolean>(false);
+  console.log("CurrentRole", CurrentRole);
 
   const checkRoleBasedOnAction = () => {
     sp.web.lists
@@ -42,8 +43,15 @@ const MainComponent: any = (props: any) => {
       .top(5000)
       .get()
       .then(async (items) => {
-        if (CurrentRole !== items[0].Role) {
-          setCurrentRole(items[0].Role);
+        if (!items || items.length === 0) {
+          setCurrentRole("No Role");
+          return;
+        }
+        const topRoleItem = items.reduce((prev, curr) => {
+          return Number(curr.Title) < Number(prev.Title) ? curr : prev;
+        });
+        if (CurrentRole !== topRoleItem.Role) {
+          setCurrentRole(topRoleItem.Role);
         }
       })
       .catch((err) => {
@@ -62,7 +70,16 @@ const MainComponent: any = (props: any) => {
       .top(5000)
       .get()
       .then(async (items) => {
-        setCurrentRole(items[0].Role);
+        console.log("items", items);
+        if (!items || items.length === 0) {
+          setLoader(false);
+          setCurrentRole("No Role");
+          return;
+        }
+        const topRoleItem = items.reduce((prev, curr) => {
+          return Number(curr.Title) < Number(prev.Title) ? curr : prev;
+        });
+        setCurrentRole(topRoleItem.Role);
         setUsers([...userList]);
         setconfigpage(false);
         setLoader(false);

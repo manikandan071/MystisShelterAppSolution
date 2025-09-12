@@ -19,6 +19,12 @@
   background: white;
   border-radius: 5px;
 }
+.min_height_59vh .p-datatable-wrapper {
+  min-height: 59vh !important;
+  /* padding: 15px; */
+  background: white;
+  border-radius: 5px;
+}
 .custom-data-table .p-datatable thead > tr > th {
   color: var(--data-table-header-font-color) !important;
   background-color: var(--data-table-header-bg-color) !important;

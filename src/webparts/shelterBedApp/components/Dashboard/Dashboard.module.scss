@@ -93,7 +93,7 @@ $primaryColor: #b99223;
 }
 .modalFooter {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: end;
   gap: 10px;
   padding-top: 10px;

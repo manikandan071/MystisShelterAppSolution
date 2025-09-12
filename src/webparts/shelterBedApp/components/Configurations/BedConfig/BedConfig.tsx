@@ -404,7 +404,7 @@ const BedConfig: React.FC = () => {
                     </span>
                     <CustomInputBox
                       value={beds?.BedName?.value}
-                      placeholder="Enter Text"
+                      placeholder="Enter here"
                       labelText=""
                       // labelText={`Bed ${index + 1}`}
                       // onChange={(value: any) => {
@@ -470,7 +470,7 @@ const BedConfig: React.FC = () => {
                   </div>
                   <CustomTextArea
                     value={beds?.BedDescription?.value}
-                    placeholder="Enter Text"
+                    placeholder="Enter here"
                     labelText=""
                     onChange={(value: any) => {
                       rowOnChangeFunction(
@@ -661,7 +661,7 @@ const BedConfig: React.FC = () => {
     [
       {
         text: "Cancel",
-        btnType: "cancelBtn",
+        btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
         onClick: () => {
@@ -741,7 +741,7 @@ const BedConfig: React.FC = () => {
     [
       {
         text: "Close",
-        btnType: "cancelBtn",
+        btnType: "closeBtn",
         disabled: false,
         startIcon: "pi pi-times-circle",
         onClick: () => {

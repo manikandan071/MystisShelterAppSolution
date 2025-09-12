@@ -37,6 +37,7 @@ import {
   fetchBedRequest,
   fetchBedsDetails,
   fetchBedslogs,
+  setDropdownOptions,
 } from "../../../../Services/RequestServices";
 import CustomButton from "../Common/Buttons/Buttons";
 
@@ -189,6 +190,10 @@ const Dashboard = (props: IProps): JSX.Element => {
   const [filterkeys, setfilterkeys] = useState<IFilterkeys>({ ..._fkeys });
   const [filterData, setfilterData] = useState<IData[]>([]);
   const [loader, setloader] = useState<boolean>(false);
+  console.log("dialog", dialog);
+  console.log("drpdowns", drpdowns);
+  console.log("masterData", masterData);
+  console.log("filterData", filterData);
 
   //Star function
   const asterisk = (): any => {
@@ -267,6 +272,7 @@ const Dashboard = (props: IProps): JSX.Element => {
         Status: "Pending",
       },
     ];
+    // const _dropdown = { ...drpdowns };
 
     const _curData: any = {
       BedNeededOn: requestData.bedneededon,
@@ -296,6 +302,17 @@ const Dashboard = (props: IProps): JSX.Element => {
       .getByTitle(SPLists.RequestList)
       .items.add(_curData)
       .then(async (requestRes) => {
+        // if (
+        //   requestData.client &&
+        //   !_dropdown.filterclient.some(
+        //     (item: any) => item.name === requestData.client
+        //   )
+        // ) {
+        //   _dropdown.filterclient.unshift({
+        //     code: requestData.client,
+        //     name: requestData.client,
+        //   });
+        // }
         if (_saveFile.length > 0) {
           await sp.web.lists
             .getByTitle(SPLists.RequestList)
@@ -368,10 +385,14 @@ const Dashboard = (props: IProps): JSX.Element => {
             setfilterData((prev: any) => {
               return [tempNewRequest, ...prev];
             });
+            setmasterData((prev: any) => {
+              return [tempNewRequest, ...prev];
+            });
             setmasterBedData((prev: any) => {
               return [tempNewRequest, ...prev];
             });
             setdialog({ ..._dialog });
+            // setdrpdowns(_dropdown);
             props.toastFunc("success", "Success", "Request added successfully");
             // getRequestLogData();
             setloader(false);
@@ -381,6 +402,7 @@ const Dashboard = (props: IProps): JSX.Element => {
   };
   //update request
   const updateRequest = (requestData: any, isDelete: boolean) => {
+    // const _dropdown = { ...drpdowns };
     const approvaljsonvalue = [
       {
         Level: 2,
@@ -458,6 +480,17 @@ const Dashboard = (props: IProps): JSX.Element => {
       .items.getById(requestData.id)
       .update(_curData)
       .then(async (res) => {
+        // if (
+        //   requestData.client.Client &&
+        //   !_dropdown.filterclient.some(
+        //     (item: any) => item.name === requestData.client.Client
+        //   )
+        // ) {
+        //   _dropdown.filterclient.push({
+        //     code: requestData.client.Client,
+        //     name: requestData.client.Client,
+        //   });
+        // }
         const tempNewRequest = {
           // id: requestData.id,
           // requestedby: props.allUser.filter(
@@ -626,6 +659,16 @@ const Dashboard = (props: IProps): JSX.Element => {
             .update(BedlogData);
         }
         if (isDelete) {
+          // const _dropdown = { ...drpdowns };
+          // const clientCount = masterData.filter(
+          //   (item) => item.client === requestData.client
+          // ).length;
+          // if (clientCount === 1) {
+          //   _dropdown.filterclient = _dropdown.filterclient.filter(
+          //     (c: any) => c.name !== requestData.client
+          //   );
+          // }
+
           props.toastFunc("success", "Success", "Request deleted successfully");
         } else {
           props.toastFunc("success", "Success", "Request updated successfully");
@@ -638,6 +681,7 @@ const Dashboard = (props: IProps): JSX.Element => {
           if (isDelete) {
             return prev.filter((item) => item.id !== requestData.id);
           }
+          debugger;
           if (existingIndex !== -1) {
             const updated = [...prev].map((request) => {
               if (request?.id === requestData.id) {
@@ -678,6 +722,84 @@ const Dashboard = (props: IProps): JSX.Element => {
                   if (
                     requestData.prevstatus === "Occupied" &&
                     requestData.status === "Closed"
+                  ) {
+                    tempLog.unshift({
+                      id: logResponseId,
+                      requestId: logData?.RequestIdId,
+                      status: logData?.Status,
+                      role: logData?.Role,
+                      userid: logData?.UserId,
+                      username: props.allUser.filter(
+                        (e) => e.Email === props.CurrentUser
+                      )[0].Title,
+                      comments: requestData.approvercomments
+                        ? requestData.approvercomments
+                        : "",
+                    });
+                  }
+                }
+                return { ...request, ...tempNewRequest, requestlog: tempLog };
+              } else {
+                return request;
+              }
+            });
+            return updated;
+          } else {
+            return [tempNewRequest, ...prev];
+          }
+        });
+        setmasterData((prev: any[]) => {
+          const existingIndex = prev.findIndex(
+            (item) => item.id === requestData.id
+          );
+          if (isDelete) {
+            return prev.filter((item) => item.id !== requestData.id);
+          }
+          if (existingIndex !== -1) {
+            const updated = [...prev].map((request) => {
+              if (request?.id === requestData.id) {
+                const tempLog = request?.requestlog;
+                if (
+                  requestData.prevstatus === "Approved" &&
+                  tempLog[0]?.status !== "Bed Assigned"
+                ) {
+                  tempLog.unshift({
+                    id: logResponseId,
+                    requestId: logData?.RequestIdId,
+                    status: logData?.Status,
+                    role: logData?.Role,
+                    userid: logData?.UserId,
+                    username: props.allUser.filter(
+                      (e) => e.Email === props.CurrentUser
+                    )[0].Title,
+                    comments: requestData.approvercomments
+                      ? requestData.approvercomments
+                      : "",
+                  });
+                } else {
+                  if (
+                    (requestData.prevstatus === "Rejected by Billing Team" ||
+                      requestData.prevstatus === "Rejected by COA") &&
+                    tempLog[0]?.status !== "Submitted"
+                  ) {
+                    tempLog.unshift({
+                      id: logResponseId,
+                      requestId: logData?.RequestIdId,
+                      status: logData?.Status,
+                      role: logData?.Role,
+                      userid: logData?.UserId,
+                      username: props.allUser.filter(
+                        (e) => e.Email === props.CurrentUser
+                      )[0].Title,
+                      comments: requestData.approvercomments
+                        ? requestData.approvercomments
+                        : "",
+                    });
+                  }
+                  if (
+                    requestData.prevstatus === "Occupied" &&
+                    requestData.status === "Closed" &&
+                    tempLog[0]?.status !== "Closed"
                   ) {
                     tempLog.unshift({
                       id: logResponseId,
@@ -759,6 +881,7 @@ const Dashboard = (props: IProps): JSX.Element => {
             return [tempNewRequest, ...prev];
           }
         });
+        // setdrpdowns(_dropdown);
         // getRequestLogData();
         setloader(false);
       })
@@ -1575,6 +1698,9 @@ const Dashboard = (props: IProps): JSX.Element => {
     fetchBedslogs(setmasterBedLogData);
     fetchBedsDetails(setmasterBedData);
   }, [props.CurrentRole]);
+  useEffect(() => {
+    setDropdownOptions(drpdowns, masterData, setdrpdowns);
+  }, [masterData]);
 
   const getFileIcon = (name: string) => {
     const extension = name.split(".").pop()?.toLowerCase();
@@ -1852,7 +1978,9 @@ const Dashboard = (props: IProps): JSX.Element => {
                   ? "New"
                   : dialog.type === "view" && props.CurrentRole === "Supervisor"
                   ? "View"
-                  : dialog.data.nextlevel === 2 || dialog.data.nextlevel === 3
+                  : (dialog.data.nextlevel === 2 ||
+                      dialog.data.nextlevel === 3) &&
+                    props.CurrentRole !== "Supervisor"
                   ? "Approve"
                   : "Edit"
               } Request`}
@@ -1971,6 +2099,7 @@ const Dashboard = (props: IProps): JSX.Element => {
                         type="file"
                         style={{ display: "none" }}
                         id="file"
+                        multiple
                         onChange={(event) =>
                           onChangeHandler("files", event.target.files)
                         }
@@ -2166,12 +2295,6 @@ const Dashboard = (props: IProps): JSX.Element => {
                   </div>
                 )} */}
               <div className={styles.modalFooter}>
-                <CustomButton
-                  btnType="cancelBtn"
-                  text={dialog.type === "view" ? "Close" : "Cancel"}
-                  // icon="pi pi-times-circle"
-                  onClick={() => setdialog({ ..._dialog })}
-                />
                 <div
                   style={{ display: "flex", gap: "15px", alignItems: "center" }}
                 >
@@ -2180,6 +2303,12 @@ const Dashboard = (props: IProps): JSX.Element => {
                       {dialog?.validation?.errorMsg}
                     </div>
                   )}
+                  <CustomButton
+                    btnType="cancelBtn"
+                    text={dialog.type === "view" ? "Close" : "Cancel"}
+                    // icon="pi pi-times-circle"
+                    onClick={() => setdialog({ ..._dialog })}
+                  />
                   {dialog.type !== "view" ? (
                     dialog.data.prevstatus === "Occupied" &&
                     props.CurrentRole === "Supervisor" ? (
@@ -2193,14 +2322,30 @@ const Dashboard = (props: IProps): JSX.Element => {
                     ) : (
                       <CustomButton
                         btnType="primaryBtn"
-                        text={dialog.type === "add" ? "Save" : "Update"}
+                        text={dialog.type === "add" ? "Submit" : "Update"}
                         // icon="pi pi-check-circle"
                         onClick={() => requestValidation("Submit")}
                       />
                     )
-                  ) : (dialog.data.nextlevel === 2 ||
-                      dialog.data.nextlevel === 3) &&
+                  ) : dialog.data.nextlevel === 2 &&
                     props.CurrentRole !== "Supervisor" ? (
+                    <>
+                      <CustomButton
+                        btnType="rejectBtn"
+                        text="Reject"
+                        // icon="pi pi-undo"
+                        onClick={() => requestValidation("Rejected")}
+                      />
+                      <CustomButton
+                        btnType="approvebtn"
+                        text="Approve"
+                        // icon="pi pi-verified"
+                        onClick={() => requestValidation("Approved")}
+                      />
+                    </>
+                  ) : dialog.data.nextlevel === 3 &&
+                    props.CurrentRole !== "Supervisor" &&
+                    props.CurrentRole === "Chief of Approval" ? (
                     <>
                       <CustomButton
                         btnType="rejectBtn"

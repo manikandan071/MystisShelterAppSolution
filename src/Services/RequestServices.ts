@@ -9,6 +9,30 @@ import { SPLists } from "../Config/Config";
 import SpServices from "./SPServices/SpServices";
 import { sp } from "@pnp/sp/presets/all";
 
+export const setDropdownOptions = (
+  dropdown: any,
+  masterData: any[],
+  setdrpdowns: any
+) => {
+  // const _dropdown: any = { ...dropdown };
+  const tempClientDetails: any[] = [];
+  masterData.forEach((master) => {
+    if (
+      master.client &&
+      !tempClientDetails.some((item: any) => item.name === master.client)
+    ) {
+      tempClientDetails.push({
+        code: master.client,
+        name: master.client,
+      });
+    }
+  });
+  setdrpdowns((prev: any) => ({
+    ...prev,
+    filterclient: tempClientDetails,
+  }));
+};
+
 export const fetchRequestLogs = async () => {
   try {
     const requestLogResponse = await SpServices.SPReadItems({
@@ -138,10 +162,16 @@ export const fetchBedRequest = async (
       const requestlogdata: any = requestLogs?.filter(
         (e: any) => e.requestId === data.Id
       );
-      _dropdown.filterclient.push({
-        code: data.Id,
-        name: data.Client,
-      });
+      // Unique client
+      if (
+        data.Client &&
+        !_dropdown.filterclient.some((item: any) => item.name === data.Client)
+      ) {
+        _dropdown.filterclient.push({
+          code: data.Client,
+          name: data.Client,
+        });
+      }
       if (
         !_dropdown.filterstatus.some((item: any) => item.name === data.Status)
       ) {
